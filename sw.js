@@ -1,7 +1,7 @@
 /* Miamots : fonctionne aussi sans Internet.
    La page principale est toujours redemandée en ligne d'abord (pour recevoir les mises à jour),
    les autres fichiers sont gardés en cache. */
-const VERSION = "miamots-v55";
+const VERSION = "miamots-v57";
 const FILES = [
   "./", "index.html", "manifest.webmanifest", "xlsx.full.min.js",
   "fonts/andika-latin-400-normal.woff2", "fonts/andika-latin-700-normal.woff2",

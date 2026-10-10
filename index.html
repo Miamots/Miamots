@@ -646,8 +646,10 @@ body:not(.wc-home) .gamebar span#gameTitle{flex:1;min-width:0;padding:12px 26px;
 
 /* ---- Jardin en aquarelle (chenille) ---- */
 .jtop{display:flex;align-items:flex-end;justify-content:center;gap:6px}
-.jtop .jdeco{height:74px;width:auto;flex:none}
-.jtop .jdeco.can{height:54px}
+.jtop .jdeco{height:48px;width:auto;flex:none;opacity:.9}
+.jtop .jdeco.can{height:36px}
+.jtop .wordpic{font-size:5.6rem;margin-bottom:6px}
+.jtop .bubble.solo{padding:10px 18px}
 .cat .jhead{width:calc(var(--b)*1.75);flex:none;z-index:3;margin-right:calc(var(--b)*-.25);transition:transform .2s}
 .cat .jhead img{width:100%;display:block;filter:drop-shadow(0 3px 3px rgba(60,90,30,.25))}
 .cat .jhead.bounce{animation:hop .6s ease}
@@ -1821,7 +1823,7 @@ function party(body,onAgain,line,extra){
   let parcMsg="";
   if(PARC_ACTIVE&&PARC&&!PARC.done&&PARC.date===todayKey()&&PARC.steps[PARC.i]===current){
     PARC.i++;
-    if(PARC.i>=PARC.steps.length){PARC.done=true;PDAYS++;save("pdays",PDAYS);setTimeout(()=>givePhoto("Parcours terminé : une photo de Miam !"),2500);again.textContent="🏆 Fin du parcours";again.onclick=()=>{SFX.tap();PARC_ACTIVE=false;parcoursEnd()};parcMsg=" Tu as fini le parcours du jour !"}
+    if(PARC.i>=PARC.steps.length){PARC.done=true;if(!PARC.bonus){PDAYS++;save("pdays",PDAYS);setTimeout(()=>givePhoto("Parcours terminé : une photo de Miam !"),2500)}again.textContent="🏆 Fin du parcours";again.onclick=()=>{SFX.tap();PARC_ACTIVE=false;parcoursEnd()};parcMsg=" Tu as fini le parcours du jour !"}
     else{const nx=PARC.steps[PARC.i];again.textContent="➡️ Étape suivante "+PLACES[nx].e;again.onclick=()=>{SFX.tap();go(nx)};parcMsg=" Prochaine étape : "+PARC_NAMES[nx]+" !"}
     save("parc",PARC);
   }
@@ -1921,7 +1923,9 @@ function pickWord(av,lvl,last){
   c=stageFilter(c,lvl);
   if(progAuto()&&PROG){const st=curStep(),fo=focusG();
     const cf=!st.add.length&&st.p==="mots"?c.filter(w=>ptier(w)===st.tier):c.filter(w=>w.s.flat().some(g=>fo.has(g)));
-    if(cf.length>=2&&Math.random()<.5)c=cf}
+    const rp=rappel();
+    if(rp.active){const nf=cf.filter(w=>!rp.items.has(w.w));if(nf.length>=2)c=nf;else if(cf.length>=2)c=cf}
+    else if(cf.length>=2&&Math.random()<.5)c=cf}
   {const nf=c.filter(w=>w.pr!=="f");if(nf.length>=2)c=nf;const hi=c.filter(w=>w.pr==="h");if(hi.length&&Math.random()<.5)c=hi}
   if(progAuto()&&PROG)return rnd(c);
   const lowest=Math.min(...c.map(wordLevel)),cap=Math.max(lvl,lowest);
@@ -2144,11 +2148,38 @@ function progSounds(i){const s=new Set();CURRIC.slice(0,(i==null?progI():i)+1).f
 /* Sons à faire travailler en priorité : ceux de l'étape (ou de la dernière étape qui a ajouté des sons) */
 /* Sons ciblés de l'étape (ou de la dernière étape qui a ajouté des sons) */
 function targetG(){for(let i=progI();i>=0;i--)if(CURRIC[i].add.length)return new Set(CURRIC[i].add.slice(0,8));return new Set()}
+/* Sons récents : ceux des étapes ouvertes ces 7 derniers jours (et la cible actuelle) */
+function recentKeys(){
+  const wk=Date.now()-7*864e5,ks=new Set();
+  ((PROG&&PROG.hist)||[]).filter(h=>h.t>=wk).forEach(h=>(CURRIC[h.i]||{add:[]}).add.forEach(g=>{if(!RARE_SND.has(g))ks.add(nk(g))}));
+  return [...ks];
+}
+/* Le rappel du jour (« Hier ») : au début de chaque journée, on revient sur les derniers sons travaillés la veille
+   (dernier jour joué avant aujourd'hui), pas encore acquis, avec des items différents autant que possible.
+   Ces réussites, faites un autre jour, nourrissent vraiment la consolidation. Le rappel est fait quand chaque son
+   a été revu 2 fois aujourd'hui (ou après 8 essais). */
+let _rp=null;
+function rappel(){
+  const d=DAY(Date.now());if(_rp&&_rp.d===d&&_rp.n===LOG.length)return _rp;
+  let last=null;for(let i=LOG.length-1;i>=0;i--){const e=LOG[i];if(e.test)continue;const ed=DAY(e.t);if(ed!==d){last=ed;break}}
+  const r={d,n:LOG.length,day:last,gs:[],items:new Set(),active:false};
+  if(last){
+    const cnt={};LOG.forEach(e=>{if(e.test||DAY(e.t)!==last)return;if(e.it)r.items.add(e.it);try{classify(e).forEach(x=>{if(x.c==="son"||x.c==="fus"||x.c==="lec")cnt[x.g]=(cnt[x.g]||0)+1})}catch(_){}});
+    r.gs=Object.keys(cnt).filter(k=>k&&!stAtLeast(compStatus("son",k).st,"acquis")).sort((a,b)=>gRank(b)-gRank(a)).slice(0,3);
+    const seen=k=>["son","fus","lec"].reduce((a,c)=>a+todayRecs(c,k).length,0);
+    const tot=r.gs.reduce((a,k)=>a+seen(k),0);
+    r.active=r.gs.length>0&&!r.gs.every(k=>seen(k)>=2)&&tot<8;
+  }
+  return _rp=r;
+}
+const gOfKey=k=>{for(const g of progSounds())if(nk(g)===k)return g;return k};
 /* Sons à privilégier pour CET item : environ 3 fois sur 10 la cible, 4 la consolidation, 3 la révision.
    Les rappels différés dus passent avant tout ; on ne sort jamais des sons déjà présentés. */
 function focusG(){
   const target=targetG();
   try{
+    const rp=rappel();if(rp.active&&Math.random()<.85)return new Set(rp.gs.map(gOfKey));        /* 1. Hier : rappel */
+    const fr=fragileG();if(fr.length&&Math.random()<.45)return new Set(fr.map(gOfKey));           /* son fragile au rappel : plus de pratique */
     const due=[],cons=[],acq=[];
     progSounds().forEach(g=>{if(target.has(g)||RARE_SND.has(g))return;const s=compStatus("son",nk(g));
       if(s.due)due.push([g,s.tc]);else if(s.st==="acquis")acq.push([g,s.last]);else cons.push([g,s.last])});
@@ -4173,17 +4204,35 @@ function soundLevel(g){if(RARE_SND.has(g))return {n:0,f:5,acc:1,ok:true,st:"acqu
 const isSylEntry=e=>["ecouter","lire","ecrire"].includes(e.g)&&(e.st==="CV"||e.st==="VC");
 const isReadEntry=e=>["lire","musee","fusee","train","ecrire"].includes(e.g)&&e.gs&&e.gs.length>=2;
 const wordOf=e=>WORDS.find(x=>x.w===e.it);
-/* Une étape est réussie quand ses nouveaux sons sont maîtrisés ET qu'on s'est assez exercé depuis son début */
-/* Règle d'ouverture (V1.3) : le son suivant s'ouvre dès que le son-lettre des sons de l'étape est CONSOLIDÉ.
-   La lecture, l'écriture et le rappel différé continuent en parallèle. */
+/* ===== Progression dans la séance ≠ maîtrise à long terme =====
+   Trois niveaux : découvert aujourd'hui → accessible pendant la séance → consolidé / acquis avec le temps.
+   Le son suivant peut s'ouvrir AUJOURD'HUI dès que chaque son de l'étape a été « suffisamment compris pour continuer » :
+   3 réussites autonomes (3 choix ou plus, sans aide) en son-lettre aujourd'hui, avec au moins 75 % de réussite aujourd'hui.
+   Ce statut n'est PAS « consolidé » : la grille de maîtrise V1.4 continue séparément (plusieurs jours, rappel différé).
+   Un son consolidé compte évidemment comme compris. On ne referme jamais un son déjà découvert. */
+const SESS={n:3,rate:.75};
+const todayRecs=(c,k)=>{const d=DAY(Date.now());MST();return (_m[c+"|"+(k||"")]||[]).filter(r=>DAY(r.t)===d)};
+function sessOK(c,k){const R=todayRecs(c,k);if(!R.length)return false;const good=R.filter(r=>r.ok&&r.w>=1).length,rate=R.filter(r=>r.ok).length/R.length;return good>=SESS.n&&rate>=SESS.rate}
+/* Fragilité au rappel : un son récent pas encore consolidé, essayé au moins 2 fois aujourd'hui avec moins de 60 % de réussite.
+   Tant qu'un son récent est fragile, on n'ouvre pas de nouveau son : on le remet plus souvent dans la séance (focusG). */
+function fragileG(){
+  const out=[],cur=new Set(curStep().add.map(nk));
+  recentKeys().forEach(k=>{if(cur.has(k))return;const c=compStatus("son",k);if(stAtLeast(c.st,"consolide"))return;
+    const R=todayRecs("son",k);if(R.length>=2&&R.filter(r=>r.ok).length/R.length<.6)out.push(k)});
+  return out;
+}
 function stepState(i,infer){
   const st=CURRIC[i],since=infer?0:((PROG&&PROG.since)||0);
   const E=LOG.filter(e=>e.t>=since&&e.f&&!e.h);
   const lots=!infer&&E.length>=60;      /* filet de sécurité : un son sans aucune activité directe ne bloque pas tout */
-  const snd=st.add.map(g=>{const l=soundLevel(g);return {g,...l,need:CRIT.son.n,done:l.ok||(lots&&l.n<3)}});
+  const snd=st.add.map(g=>{const l=soundLevel(g),sess=!infer&&!RARE_SND.has(g)&&sessOK("son",nk(g));
+    return {g,...l,sess,need:CRIT.son.n,done:l.ok||sess||(lots&&l.n<3)}});
   let need=0,have=0;
-  if(st.p==="syl"){const ks=[...progSounds(i)].map(nk);need=1;have=ks.some(k=>stAtLeast(compStatus("fus",k).st,"consolide"))?1:0}
-  return {snd,need,have,done:snd.every(x=>x.done)&&have>=need};
+  if(st.p==="syl"){const ks=[...progSounds(i)].map(nk);need=1;
+    const fusToday=infer?0:ks.reduce((a,k)=>a+todayRecs("fus",k).filter(r=>r.ok&&r.w>=1).length,0);
+    have=(ks.some(k=>stAtLeast(compStatus("fus",k).st,"consolide"))||fusToday>=SESS.n)?1:0}
+  const frag=infer?[]:fragileG();
+  return {snd,need,have,frag,done:snd.every(x=>x.done)&&have>=need&&!frag.length};
 }
 /* ===================== Maîtrise par compétence (Miamots_maitrise_V1-3) =====================
    Compétences par son : son = son-lettre · fus = fusion syllabique · lec = lecture de mots · ecr = écriture.
@@ -4598,7 +4647,7 @@ function nextSteps(R){
   if(progAuto()&&PROG){
     for(let i=out.length-1;i>=0;i--)if(/Prochain son à découvrir/.test(out[i].txt))out.splice(i,1);
     const i=progI(),st=curStep(),S=stepState(i),miss=S.snd.filter(x=>!x.done).map(x=>"« "+x.g+" »");
-    out.unshift({txt:`Chemin de lecture : étape ${i+1} sur ${CURRIC.length} (${st.t}). `+(S.done?"Elle est réussie : la suite arrive à la prochaine partie.":miss.length?`Miamots fait travailler ${joinFr(miss)} dans tous les jeux ; l'étape suivante s'ouvrira d'elle-même quand ces sons seront bien réussis.`:"Encore quelques réussites et l'étape suivante s'ouvrira d'elle-même.")});
+    out.unshift({txt:`Chemin de lecture : étape ${i+1} sur ${CURRIC.length} (${st.t}). `+(S.done?"Elle est réussie : la suite arrive à la prochaine partie.":S.frag&&S.frag.length?`Au rappel d'aujourd'hui, ${joinFr(S.frag.map(k=>"« "+gOfKey(k)+" »"))} ${S.frag.length>1?"sont encore fragiles":"est encore fragile"} : Miamots le remet plus souvent dans les jeux avant d'ouvrir un nouveau son (rien n'est refermé).`:miss.length?`Miamots fait travailler ${joinFr(miss)} dans tous les jeux ; le son suivant peut s'ouvrir dès aujourd'hui après 3 réussites seul de suite (sans que ce soit encore « consolidé » : ça, c'est vérifié les jours suivants).`:"Encore quelques réussites et l'étape suivante s'ouvrira d'elle-même.")});
     if(st.p==="oral")out.splice(1,0,{txt:"À cette étape, tout se passe à l'oral : l'atelier des Sons (Quel mot j'ai dit ?, Le premier son, Pareil ou pas ?) et le jardin (compter les syllabes). Les autres lieux s'ouvriront ensuite, un à la fois."});
     if(st.p==="sons")out.splice(1,0,{txt:"À cette étape, on n'apprend pas encore à lire : on écoute chaque son, on trouve les mots qui commencent par ce son et la lettre qui le fait. L'atelier des Sons a une petite leçon pour chaque son (Nouveau son)."});
   }
@@ -5074,7 +5123,15 @@ function planParcours(){
       steps.push(pickOne(["train","lire","musee","fusee","ecrire"],steps)||"musee");   /* 3. révision mixte */
     }
     steps=steps.filter(Boolean);
-    return{date:todayKey(),steps,i:0,done:false,lesson,act,prof};
+    /* Parcours V1.5 : 1. Hier (rappel court) · 2. Aujourd'hui (cible / découverte) · 3. Je joue avec ce que je sais */
+    const rp=rappel();let lab=["Aujourd'hui","Je joue","Je joue"];
+    const today=steps[0];
+    if(rp.active){
+      const hier=prof==="lecteur_en_developpement"?(pickOne(["lire","musee","fusee"],[today])||"musee"):(pickOne(["ecouter","musee"],[today])||"ecouter");
+      const mix=pickOne(["ecouter","lire","musee","fusee","ecrire","train","chenille"],[hier,today])||steps[2]||"musee";
+      steps=[hier,today,mix];lab=["Hier","Aujourd'hui","Je joue avec ce que je sais"];
+    }else lab=["Aujourd'hui","Je joue avec ce que je sais","Je joue avec ce que je sais"];
+    return{date:todayKey(),steps,i:0,done:false,lesson,act,prof,lab};
   }
   const want=[];
   if(LOG.length){
@@ -5100,17 +5157,19 @@ function renderParcours(){
   const card=el("div","parc");
   const sc=el("div","scene"),m=makeMiam("accueil");m.style.width="min(110px,30vw)";
   const names=P.steps.map(g=>PARC_NAMES[g]);
-  const talk=P.done?"On a tout fini aujourd'hui ! Bravo !":P.i===0?"Aujourd'hui, on va "+names[0]+", puis "+names[1]+", et enfin "+names[2]+" !":"On continue ? Prochaine étape : "+names[P.i]+" !";
+  const talk=P.done?"On a tout fini aujourd'hui ! Bravo !":P.i===0?(P.lab&&P.lab[0]==="Hier"?"D'abord, on se rappelle ce que tu as appris hier : on va "+names[0]+". Ensuite, on va "+names[1]+", et enfin "+names[2]+" !":"Aujourd'hui, on va "+names[0]+", puis "+names[1]+", et enfin "+names[2]+" !"):"On continue ? Prochaine étape : "+names[P.i]+" !";
   sc.append(m,el("div","bubble",talk));card.appendChild(sc);
   const path=el("div","ppath");
   P.steps.forEach((g,i)=>{
     const st=i<P.i||P.done?"done":i===P.i?"cur":"next";
-    const n=el("div","pstep "+st,`<span class="pe">${st==="done"?"✅":PLACES[g].e}</span><b>${PLACES[g].n}</b><small>Étape ${i+1}</small>`);
+    const n=el("div","pstep "+st,`<span class="pe">${st==="done"?"✅":PLACES[g].e}</span><b>${PLACES[g].n}</b><small>${P.lab&&P.lab[i]?P.lab[i]:"Étape "+(i+1)}</small>`);
     path.appendChild(n);
     if(i<P.steps.length-1)path.appendChild(el("span","parrow","➜"));
   });
   card.appendChild(path);
-  if(P.done){card.appendChild(el("p","msg","🏆 Parcours terminé ! Reviens demain pour un nouveau parcours."))}
+  if(P.done){card.appendChild(el("p","msg","🏆 Parcours terminé ! Tu peux continuer à jouer si tu veux."));
+    if(progAuto()&&PROG){const more=el("button","card btn gobtn","🌟 Encore 3 activités !");more.onclick=()=>{SFX.tap();const N=planParcours();N.bonus=true;N.lab=["Aujourd'hui","Je joue avec ce que je sais","Je joue avec ce que je sais"];
+      if(N.steps[0]===P.steps[0]&&N.steps.length>1)N.steps.push(N.steps.shift());PARC=N;save("parc",PARC);PARC_ACTIVE=true;go(PARC.steps[0])};card.appendChild(more)}}
   else{const go_=el("button","card btn gobtn",P.i===0?"▶️ C'est parti !":"▶️ Continuer");go_.onclick=()=>{SFX.tap();PARC_ACTIVE=true;go(P.steps[P.i])};card.appendChild(go_)}
   if(PDAYS)card.appendChild(el("p","rlegend center2","🔥 "+PDAYS+" parcours terminé"+(PDAYS>1?"s":"")+" en tout"));
   body.appendChild(card);
