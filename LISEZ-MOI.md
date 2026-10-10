@@ -6,7 +6,11 @@ Ce dossier contient tout ce qu'il faut. Il ne faut rien modifier : déposez simp
 
 | Fichier | Rôle |
 |---|---|
-| `index.html` | L'application Miamots |
+| `index.html` | La page de l'application (le squelette) |
+| `app.js` | La mécanique : jeux, progression, rapport |
+| `donnees.js` | Les données : banque de mots, mots-outils, phrases, images |
+| `reglages.js` | Les réglages pédagogiques (seuils de progression) : les seuls chiffres à ajuster |
+| `style.css` | L'apparence |
 | `manifest.webmanifest` | Nom, icône et couleurs de l'app installée |
 | `sw.js` | Permet à l'app de fonctionner sans Internet |
 | `xlsx.full.min.js` | Sert à l'export Excel (hors ligne) |
@@ -20,13 +24,13 @@ GitHub accepte au plus 100 fichiers par envoi. Les images sont donc rangées en 
 
 | Dossier | Fichiers |
 |---|---|
-| (racine) : index.html, sw.js, manifest.webmanifest, home.webp, intro.mp4, xlsx.full.min.js, verifier.html, LISEZ-MOI.md | 8 |
+| (racine) : index.html, app.js, donnees.js, reglages.js, style.css, sw.js, manifest.webmanifest, home.webp, intro.mp4, xlsx.full.min.js, verifier.html, LISEZ-MOI.md | 12 |
 | `img/jeux` | 77 |
 | `img/autocollants-a` | 58 |
 | `img/autocollants-b` | 60 |
 | `img/photos` | 75 |
-| `img/mots-a` | 54 |
-| `img/mots-b` | 53 |
+| `img/mots-a` | 81 |
+| `img/mots-b` | 80 |
 | `img/statuts` | 4 |
 | `audio` | 29 |
 | `icons`, `fonts`, `vendor` | 10 |
@@ -88,7 +92,7 @@ Chaque version de l'app garde ses propres données. Pour garder les étoiles, le
 
 ## Mettre à jour l'app plus tard
 
-Remplacez simplement `index.html` chez l'hébergeur par la nouvelle version (GitHub : « Add file › Upload files » ; Netlify : glissez à nouveau le dossier). Les téléphones reçoivent la mise à jour à la prochaine ouverture avec Internet. **Les données de l'enfant sont conservées**, tant que l'adresse ne change pas.
+Remplacez chez l'hébergeur les fichiers qui ont changé (en général `index.html`, `app.js`, `donnees.js`, `reglages.js`, `style.css` et `sw.js`) (GitHub : « Add file › Upload files » ; Netlify : glissez à nouveau le dossier). Les téléphones reçoivent la mise à jour à la prochaine ouverture avec Internet. **Les données de l'enfant sont conservées**, tant que l'adresse ne change pas.
 
 Si vous remplacez aussi d'autres fichiers (icônes, police, images…), augmentez le numéro `miamots-vXX` au début de `sw.js` (par exemple v52 → v53).
 
