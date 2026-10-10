@@ -25,21 +25,22 @@ GitHub accepte au plus 100 fichiers par envoi. Les images sont donc rangées en 
 | `img/autocollants-a` | 58 |
 | `img/autocollants-b` | 60 |
 | `img/photos` | 75 |
-| `img/mots` | 107 |
+| `img/mots-a` | 54 |
+| `img/mots-b` | 53 |
 | `img/statuts` | 4 |
 | `audio` | 29 |
 | `icons`, `fonts`, `vendor` | 10 |
 
 **La règle d'or : toujours glisser le DOSSIER lui-même, jamais les fichiers qu'il contient.** Si on glisse le dossier `photos`, GitHub crée `img/photos/...`. Si on glisse seulement les images, elles tombent à la racine et l'app ne les trouve plus.
 
-Faites 7 envois, chacun avec **Add file › Upload files** puis **Commit changes** :
+Faites 8 envois, chacun avec **Add file › Upload files** puis **Commit changes** :
 
 1. Les **fichiers de la racine** (sélectionnez-les, sans les dossiers) + les dossiers **`icons`, `fonts`, `vendor`, `audio`**.
 2. Ouvrez le dossier `img` du dépôt sur GitHub (ou créez-le en envoyant le premier dossier), puis glissez le dossier **`jeux`**.
 3. Toujours dans `img` : glissez **`autocollants-a`**.
 4. Glissez **`autocollants-b`**.
 5. Glissez **`photos`**.
-6. Glissez **`mots`** (les images aquarelle des mots).
+6. Glissez **`mots-a`**, puis dans un autre envoi **`mots-b`** (les images aquarelle des mots, coupées en deux à cause de la limite de 100 fichiers).
 7. Glissez **`statuts`** (les petites images du rapport).
 
 Pour les envois 2 à 5, une autre façon simple : depuis la racine du dépôt, glissez le dossier `img` lui-même… mais seulement s'il contient un seul sous-dossier à la fois. Le plus sûr reste d'ouvrir `img` dans GitHub d'abord, puis d'y glisser chaque sous-dossier.
