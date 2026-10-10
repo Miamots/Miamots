@@ -25,7 +25,7 @@ GitHub accepte au plus 100 fichiers par envoi. Les images sont donc rangées en 
 | `img/autocollants-a` | 58 |
 | `img/autocollants-b` | 60 |
 | `img/photos` | 75 |
-| `img/mots` | 81 |
+| `img/mots` | 107 |
 | `img/statuts` | 4 |
 | `audio` | 29 |
 | `icons`, `fonts`, `vendor` | 10 |
