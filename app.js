@@ -2032,11 +2032,15 @@ const SCENES={
 };
 /* ===== L'horloge de la gare : apprendre à lire l'heure avec les aiguilles =====
    Chaque toucher montre une nouvelle heure (heure juste, parfois « et demie ») et Miam explique où sont les aiguilles. */
-const CLOCK_SVG=()=>{let n="";for(let h=1;h<=12;h++){const a=h*Math.PI/6,x=100+70*Math.sin(a),y=100-70*Math.cos(a);n+=`<text x="${x.toFixed(1)}" y="${(y+7).toFixed(1)}" text-anchor="middle">${h}</text>`}
+const CLOCK_IMG={m:"img/horloge/horloge-minute.webp",h:"img/horloge/horloge-heure.webp",n:["img/horloge/horloge-1.webp","img/horloge/horloge-2.webp","img/horloge/horloge-3.webp","img/horloge/horloge-4.webp","img/horloge/horloge-5.webp","img/horloge/horloge-6.webp","img/horloge/horloge-7.webp","img/horloge/horloge-8.webp","img/horloge/horloge-9.webp","img/horloge/horloge-10.webp","img/horloge/horloge-11.webp","img/horloge/horloge-12.webp"]};
+const CLOCK_ND=[[82, 110], [97, 110], [100, 110], [104, 110], [99, 110], [99, 110], [84, 110], [110, 110], [97, 110], [135, 110], [120, 110], [132, 110]];
+/* Horloge aquarelle : chiffres de couleur et deux aiguilles (petite rouge = heures, grande bleue = minutes) */
+const CLOCK_SVG=()=>{let n="";for(let h=1;h<=12;h++){const a=h*Math.PI/6,x=100+71*Math.sin(a),y=100-71*Math.cos(a),[w0,h0]=CLOCK_ND[h-1],k=22/h0,w=w0*k;
+    n+=`<image href="${CLOCK_IMG.n[h-1]}" x="${(x-w/2).toFixed(1)}" y="${(y-11).toFixed(1)}" width="${w.toFixed(1)}" height="22"/>`}
   return `<svg viewBox="0 0 200 200" aria-hidden="true"><g class="cnum">${n}</g>
-  <g class="chand ch-h"><path d="M100 104 L96 100 L100 52 L104 100 Z"/></g>
-  <g class="chand ch-m"><path d="M100 106 L97.5 100 L100 26 L102.5 100 Z"/></g>
-  <circle cx="100" cy="100" r="6" class="cpin"/></svg>`};
+  <g class="chand ch-h"><image href="${CLOCK_IMG.h}" x="91.89" y="50.00" width="16.80" height="58.27"/></g>
+  <g class="chand ch-m"><image href="${CLOCK_IMG.m}" x="88.24" y="26.00" width="23.99" height="83.80"/></g>
+  <circle cx="100" cy="100" r="3.2" class="cpin"/></svg>`};
 function addClock(wrap,[l,t,w]){const c=el("div","sclock",CLOCK_SVG());c.style.cssText=`left:${l}%;top:${t}%;width:${w}%`;wrap.appendChild(c);setClock(c,load("gareH",[3,0]))}
 function setClock(c,[h,m]){c.querySelector(".ch-h").style.transform=`rotate(${(h%12)*30+m/2}deg)`;c.querySelector(".ch-m").style.transform=`rotate(${m*6}deg)`;c.dataset.h=h;c.dataset.m=m}
 function clockTap(wrap){
@@ -2044,8 +2048,8 @@ function clockTap(wrap){
   const old=+c.dataset.h;let h;do{h=1+Math.floor(Math.random()*12)}while(h===old);
   const m=Math.random()<.3?30:0;setClock(c,[h,m]);save("gareH",[h,m]);
   const H=h===1?"une heure":h+" heures",nx=h===12?1:h+1;
-  const t=m===0?`La petite aiguille montre le ${h}. La grande aiguille montre le 12. Il est ${H} !`
-    :`La grande aiguille montre le 6 : c'est la demie. La petite aiguille est entre le ${h} et le ${nx}. Il est ${H} et demie !`;
+  const t=m===0?`La petite aiguille rouge montre le ${h}. La grande aiguille bleue montre le 12. Il est ${H} !`
+    :`La grande aiguille bleue montre le 6 : c'est la demie. La petite aiguille rouge est entre le ${h} et le ${nx}. Il est ${H} et demie !`;
   let f=wrap.querySelector(".mfact");if(!f){f=el("div","mfact");wrap.appendChild(f)}
   f.innerHTML=`<span class="bigclock">${CLOCK_SVG()}</span><p>${t}</p>`;f.classList.remove("on");void f.offsetWidth;f.classList.add("on");
   {const bc=f.querySelector(".bigclock");bc.querySelectorAll(".chand").forEach(x=>x.style.transition="none");setClock(bc,[h,m])}   /* la même heure, en grand, dans la bulle */

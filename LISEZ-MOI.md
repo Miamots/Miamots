@@ -34,6 +34,7 @@ GitHub accepte au plus 100 fichiers par envoi. Les images sont donc rangées en 
 | `img/mots-m-p` | 58 (mots de m à p) |
 | `img/mots-q-z` | 58 (mots de q à z) |
 | `img/statuts` | 4 |
+| `img/horloge` | 14 (aiguilles et chiffres de l'horloge de la gare) |
 | `audio` | 29 |
 | `icons`, `fonts`, `vendor` | 10 |
 
@@ -53,7 +54,7 @@ Pour les envois 2 à 5, une autre façon simple : depuis la racine du dépôt, g
 
 ### Vérifier que tout est au bon endroit
 
-Une fois en ligne, ouvrez : **https://miamots.github.io/miamots/verifier.html**
+Une fois en ligne, ouvrez : **https://miamots.github.io/Miamots/verifier.html**
 
 La page vérifie chaque fichier et affiche ✅ si tout est bon, ou la liste des dossiers où il manque quelque chose.
 

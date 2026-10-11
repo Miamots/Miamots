@@ -867,7 +867,7 @@ header{align-items:center}
 .wchot.fact:active{background:rgba(255,230,140,.25)}
 .scenewrap{position:relative;width:100%;max-width:560px;margin:4px auto 0;border-radius:20px;overflow:hidden;border:3px solid #E2CB95;container-type:inline-size}
 .sceneimg{display:block;width:100%;height:auto;user-select:none}
-.scenewrap .mfact{top:auto;bottom:17cqw;left:4%;right:4%}
+.scenewrap .mfact{top:auto;bottom:22cqw;left:4%;right:4%}
 .playcard{position:absolute;left:0;right:0;margin:0 auto;width:max-content;bottom:3cqw;display:flex;align-items:center;gap:3cqw;padding:2.4cqw 6cqw 2.4cqw 3cqw;border-radius:24px;border:4px solid #fff;background:linear-gradient(160deg,#FFF1C9,#FFD98A);box-shadow:0 6px 0 rgba(120,80,20,.3),0 10px 24px rgba(0,0,0,.2);cursor:pointer;z-index:7;font-family:inherit;color:#1E2A55}
 .playcard img{animation:mzPulse 1.8s ease-in-out infinite}
 .playcard img{width:14cqw;height:14cqw;object-fit:contain}
