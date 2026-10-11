@@ -25,12 +25,14 @@ GitHub accepte au plus 100 fichiers par envoi. Les images sont donc rangées en 
 | Dossier | Fichiers |
 |---|---|
 | (racine) : index.html, app.js, donnees.js, reglages.js, style.css, sw.js, manifest.webmanifest, home.webp, intro.mp4, xlsx.full.min.js, verifier.html, LISEZ-MOI.md | 12 |
-| `img/jeux` | 77 |
+| `img/jeux` | 84 |
 | `img/autocollants-a` | 58 |
 | `img/autocollants-b` | 60 |
 | `img/photos` | 75 |
-| `img/mots-a` | 81 |
-| `img/mots-b` | 80 |
+| `img/mots-a-c` | 67 (mots de a à c) |
+| `img/mots-d-l` | 52 (mots de d à l) |
+| `img/mots-m-p` | 58 (mots de m à p) |
+| `img/mots-q-z` | 58 (mots de q à z) |
 | `img/statuts` | 4 |
 | `audio` | 29 |
 | `icons`, `fonts`, `vendor` | 10 |
@@ -44,7 +46,7 @@ Faites 8 envois, chacun avec **Add file › Upload files** puis **Commit changes
 3. Toujours dans `img` : glissez **`autocollants-a`**.
 4. Glissez **`autocollants-b`**.
 5. Glissez **`photos`**.
-6. Glissez **`mots-a`**, puis dans un autre envoi **`mots-b`** (les images aquarelle des mots, coupées en deux à cause de la limite de 100 fichiers).
+6. Glissez les 4 dossiers d'images de mots, un envoi chacun : **`mots-a-c`**, **`mots-d-l`**, **`mots-m-p`**, **`mots-q-z`** (rangées par première lettre ; une nouvelle image va toujours dans le dossier de sa lettre). Les anciens dossiers `mots`, `mots-a`, `mots-b`, `mots-a-l` et `mots-m-z` ne servent plus.
 7. Glissez **`statuts`** (les petites images du rapport).
 
 Pour les envois 2 à 5, une autre façon simple : depuis la racine du dépôt, glissez le dossier `img` lui-même… mais seulement s'il contient un seul sous-dossier à la fois. Le plus sûr reste d'ouvrir `img` dans GitHub d'abord, puis d'y glisser chaque sous-dossier.

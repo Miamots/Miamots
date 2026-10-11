@@ -25,6 +25,9 @@ const LOGO_IMG="img/jeux/logo-miamots.webp";
 const PH_DEFAULT={"a":"audio/ph-a.mp3","i":"audio/ph-i.mp3","o":"audio/ph-o.mp3","u":"audio/ph-u.mp3","é":"audio/ph-e-aigu.mp3","è":"audio/ph-e-grave.mp3","e":"audio/ph-e.mp3","ou":"audio/ph-ou.mp3","on":"audio/ph-on.mp3","an":"audio/ph-an.mp3","in":"audio/ph-in.mp3","oi":"audio/ph-oi.mp3","eu":"audio/ph-eu.mp3","m":"audio/ph-m.mp3","l":"audio/ph-l.mp3","s":"audio/ph-s.mp3","f":"audio/ph-f.mp3","r":"audio/ph-r.mp3","v":"audio/ph-v.mp3","ch":"audio/ph-ch.mp3","j":"audio/ph-j.mp3","n":"audio/ph-n.mp3","z":"audio/ph-z.mp3","p":"audio/ph-p.mp3","t":"audio/ph-t.mp3","b":"audio/ph-b.mp3","d":"audio/ph-d.mp3","k":"audio/ph-k.mp3","g":"audio/ph-g.mp3"};
 /* Jardin et cuisine : scènes d'entrée illustrées */
 const JARDIN_SCENE_IMG="img/jeux/jardin-scene.webp";
+const GARE_SCENE_IMG="img/jeux/gare-scene.webp";
+const MUSEE_SCENE_IMG="img/jeux/musee-scene.webp";
+const ECOLE_SCENE_IMG="img/jeux/ecole-scene.webp";
 const CUISINE_SCENE_IMG="img/jeux/cuisine-scene.webp";
 /* Bibliothèque : menu illustré */
 const LIRE_MENU_IMG="img/jeux/bibliotheque-menu.webp";
@@ -727,8 +730,8 @@ function parseG(str){const out=[];let i=0;while(i<str.length){const m=MULTI.find
    devient illustré et peut donc entrer dans les jeux d'images, toujours selon les graphèmes connus. */
 WORDS.forEach(w=>{const k=WIMG[w.w];if(k){w.emo=w.e;w.e=`<i class="wi wi-${k}"></i>`}});
 /* Images presque identiques : même image, pour qu'elles ne soient jamais proposées ensemble dans un même choix
-   (chaton ≈ chat ; agneau ≈ mouton). PIC_OFF : mots dont l'image est retirée des jeux (aucun pour l'instant). */
-const PIC_SAME={chaton:"chat",agneau:"mouton"},PIC_OFF=[];
+   (chaton ≈ chat ; agneau ≈ mouton ; vipère ≈ serpent). PIC_OFF : mots dont l'image est retirée des jeux (aucun pour l'instant). */
+const PIC_SAME={chaton:"chat",agneau:"mouton",vipère:"serpent"},PIC_OFF=[];
 PIC_OFF.forEach(x=>{const A=WORDS.find(w=>w.w===x);if(A){A.e=A.emo||null;if(A.e&&A.e.startsWith("<i"))A.e=null}});
 Object.entries(PIC_SAME).forEach(([a,b])=>{const A=WORDS.find(w=>w.w===a),B=WORDS.find(w=>w.w===b);if(A&&B&&B.e)A.e=B.e});
 let CUSTOM=load("custom",[]);
@@ -742,21 +745,6 @@ const READ_ACTS={
   syl:{t:"Quelle syllabe ?",d:"J'entends les sons ou le mot, je trouve la syllabe",img:()=>(STK_IMG.sons||[])[12]}
 };
 function startRead(){R.round=0;R.mode=null;renderReadMenu()}
-const BOOK_FACTS={
-  globe:[["🌍","La Terre est ronde comme ce globe. Le bleu, ce sont les océans : il y a plus d'eau que de terre !"],["🍁","Sur le globe, cherche le Canada : c'est un des plus grands pays du monde !"]],
-  owl:[["🦉","Le hibou peut tourner sa tête presque tout autour de lui !"],["🌙","Le hibou chasse la nuit : il voit très bien dans le noir."]],
-  fox:[["🦊","Le renard dort roulé en boule, avec sa queue comme une couverture."],["❄️","Le renard entend une souris qui bouge sous la neige !"]],
-  bird:[["🐦","C'est une mésange. Elle chante presque son nom : « tchic-a-di-di-di » !"]],
-  squirrel:[["🐿️","L'écureuil cache des noisettes pour l'hiver… et il en oublie ! Elles deviennent des arbres."]],
-  binoc:[["🔭","Les jumelles rapprochent ce qui est loin : parfait pour observer les oiseaux !"]],
-  stars:[["✨","Les étoiles forment des dessins dans le ciel : on les appelle des constellations."],["🥄","La Grande Ourse ressemble à une grande casserole !"]],
-  lantern:[["🏮","Avant l'électricité, on lisait le soir à la lumière d'une lanterne."]],
-  miam:[["📖","Les mots sont faits de sons : quand tu lis, tu fais chanter les lettres !"],["🌟","Plus tu lis, plus tu connais de mots… et plus tu découvres le monde !"]],
-  book:[["🐾","Un livre documentaire nous apprend des vraies choses sur les animaux et la nature."],["📚","Les premiers livres imprimés ont été fabriqués il y a plus de 500 ans !"]],
-  leaf:[["🍁","On reconnaît un arbre à la forme de ses feuilles : la feuille d'érable est sur le drapeau du Canada !"]],
-  mountain:[["🏔️","Les montagnes sont si hautes que la neige y reste même au printemps."]],
-  clock:[["🧭","Une boussole montre toujours le nord : les explorateurs l'utilisaient pour ne pas se perdre."]]
-};
 /* Miamots — phrases V1.1 (174 phrases graduées ; PH029 et PH061 corrigées : mots retirés « ravi » et « toc » remplacés) : [id, étape banque, phrase, question, réponse, 1 très courte / 2 courte] */
 /* ===== Phrases V1.1 : lecture de phrases + question de compréhension =====
    Règles : chaque mot de contenu doit être lisible avec les graphèmes connus de l'enfant (banque V7) ;
@@ -1266,6 +1254,7 @@ const SOLAR={
  uranus:{n:"Uranus",short:"Uranus",e:"",c:["#06202a","#2a7f8f"],pc:"#9FE3E8",pd:"#6CC2CC",ps:44,rank:7,sv:"🧊",svn:"un glaçon de l'espace",fact:"Uranus est une planète très, très froide."},
  neptune:{n:"Neptune",short:"Neptune",e:"",c:["#061533","#1d5aa8"],pc:"#4A86E3",pd:"#2D5DB0",ps:44,rank:8,sv:"💎",svn:"un cristal bleu",fact:"Neptune est la planète la plus loin du Soleil."}
 };
+/* Faits sur les planètes : ils changent à chaque visite (voir nextFact) */
 const MAP_SOLAR=["soleil","mercure","venus","terre","lune","mars","jupiter","saturne","uranus","neptune"];
 /* Ordre des voyages : la Lune, puis vers l'extérieur jusqu'à Neptune, puis retour vers le Soleil */
 const VOYAGES=[["lune",5],["mars",5],["jupiter",6],["saturne",6],["uranus",7],["neptune",7],["venus",7],["mercure",8],["soleil",8]];
@@ -1308,8 +1297,9 @@ function renderSpaceMap(){
     map.querySelectorAll(".solhot").forEach(h=>h.classList.toggle("sel",h.dataset.k===k));
     const rank=x.rank?(x.rank===1?"1re":x.rank+"e")+" planète depuis le Soleil":k==="lune"?"tourne autour de la Terre":"une étoile";
     const status=k==="terre"?"🏠 Notre planète : c'est le point de départ !":done?"🚩 Déjà visité · souvenir : "+x.sv+" "+x.svn:cur?"🚀 C'est le prochain voyage : "+d.steps+" mots à trouver !":"✨ À découvrir dans un prochain voyage.";
-    info.innerHTML=`<b>${x.short}</b> <small>· ${rank}</small><p>${x.fact||"La Terre est notre maison : c'est la seule planète où l'on sait qu'il y a de la vie."}</p><p class="solst">${status}</p>`;
-    speak(x.short+". "+(x.fact||"C'est notre maison !"));
+    const ft=nextFact("e:"+k,SOLAR_FACTS[k])||x.fact||"";
+    info.innerHTML=`<b>${x.short}</b> <small>· ${rank}</small><p>${ft}</p><p class="solst">${status}</p>`;
+    speak(x.short+". "+ft);
   };
   MAP_SOLAR.forEach(k=>{
     const H=SOLAR_HOT[k];if(!H)return;
@@ -1320,7 +1310,7 @@ function renderSpaceMap(){
       SFX.tap();
       if(k===d.key){
         map.querySelectorAll(".solhot").forEach(h=>h.classList.toggle("sel",h===btn));
-        info.innerHTML=`<b>🚀 C'est parti pour ${d.short} !</b><p>${SOLAR[k].fact||""}</p>`;
+        info.innerHTML=`<b>🚀 C'est parti pour ${d.short} !</b><p>${nextFact("e:"+k,SOLAR_FACTS[k])||SOLAR[k].fact||""}</p>`;
         speak("C'est parti pour "+d.n+" !");setTimeout(launch,1200);return;
       }
       show(k);
@@ -1976,19 +1966,13 @@ function renderTrack(x,lvl,body){
 }
 
 /* Petites découvertes sur le son et la musique (comme les planètes) */
-const MUSIC_FACTS={
-  miam:[["🗣️","Pose ta main sur ton cou et dis « mmmm » : tu sens ta gorge vibrer ? C'est ta voix !"],["🐝","Dis « zzzz » puis « ssss » avec la main sur ton cou : un son vibre, l'autre pas !"],["👂","On entend avec les oreilles, mais un son, c'est de l'air qui vibre."]],
-  speaker:[["🔊","Un haut-parleur bouge très vite d'avant en arrière : il pousse l'air, et ça fait le son !"],["💨","Le son voyage dans l'air jusqu'à tes oreilles, très vite : plus vite qu'une voiture de course !"]],
-  disco:[["🪩","La boule disco est couverte de petits miroirs : chacun renvoie la lumière dans une direction."],["✨","Quand la boule tourne, les taches de lumière dansent sur les murs !"]],
-  vinyl:[["💿","Sur un disque, la musique est gravée dans un tout petit sillon en spirale."],["🎶","L'aiguille glisse dans le sillon, vibre, et fait renaître la musique."]],
-  deck:[["🎧","Un DJ a deux platines : il fait passer une chanson à l'autre sans arrêter la musique."],["🎚️","Les boutons de la table servent à monter ou baisser le son de chaque disque."]],
-  waves:[["🎵","Un son aigu vibre très vite. Un son grave vibre lentement."],["🚀","Dans l'espace, il n'y a pas d'air : on n'entend aucun son, même pas une fusée !"]],
-  laptop:[["💻","Un ordinateur peut enregistrer ta voix et la garder pour toujours."],["🎙️","Toutes les voix de Miamots ont été enregistrées avec un téléphone !"]],
-  headph:[["🎧","Le casque met la musique tout près de tes oreilles, juste pour toi."],["🥁","Dans ton oreille, il y a une toute petite peau qui vibre comme un tambour : le tympan !"]]
-};
-let factI={};
+/* Les découvertes changent d'une visite à l'autre : on avance dans la liste de chaque objet, et on retient où on en est
+   (même après avoir fermé l'app). Ainsi Jules ne réentend pas la même chose deux fois de suite. */
+let factI=load("factI",{});
+function nextFact(key,L){if(!L||!L.length)return null;let i=factI[key];i=(i==null?Math.floor(Math.random()*L.length):i+1)%L.length;factI[key]=i;save("factI",factI);return L[i]}
 function showFact(wrap,k,F){
-  const L=(F||MUSIC_FACTS)[k],i=(factI[k]||0)%L.length;factI[k]=i+1;const[e,t]=L[i];
+  const FS=F||MUSIC_FACTS,id=(FS===GARDEN_FACTS?"j:":FS===KITCHEN_FACTS?"c:":FS===BOOK_FACTS?"b:":FS===STATION_FACTS?"g:":FS===MUSEUM_FACTS?"u:":FS===SCHOOL_FACTS?"e:":"m:")+k;
+  const fx=nextFact(id,FS[k]),nm=(typeof kidName==="function"&&kidName())||"",e=fx[0],t=fx.length>2?(nm?fx[1].replace(/\{nom\}/g,nm):fx[2]):fx[1];
   let c=wrap.querySelector(".mfact");if(!c){c=el("div","mfact");wrap.appendChild(c)}
   c.innerHTML=`<span>${e}</span><p>${t}</p>`;c.classList.remove("on");void c.offsetWidth;c.classList.add("on");
   c.onclick=()=>c.classList.remove("on");clearTimeout(c._t);c._t=setTimeout(()=>c.classList.remove("on"),9000);
@@ -2023,60 +2007,59 @@ function renderSonsMenu(){
   speak("Bienvenue à l'atelier des sons ! Touche les objets pour découvrir des secrets sur la musique.");
 }
 /* ===== Scènes d'entrée : un décor à explorer + une seule carte « Jouer » ===== */
-const GARDEN_FACTS={
-  sunflower:[["🌻","Quand il est jeune, le tournesol tourne sa tête pour suivre le soleil !"],["🌰","Un seul tournesol peut porter plus de mille graines."]],
-  ladybug:[["🐞","Les points de la coccinelle ne disent pas son âge !"],["🌿","La coccinelle mange les pucerons qui abîment les plantes : c'est l'amie du jardinier."]],
-  bee:[["🐝","L'abeille transporte le pollen de fleur en fleur : sans elle, pas de fruits !"],["💃","Les abeilles dansent pour montrer aux autres où sont les fleurs."]],
-  worm:[["🪱","Le ver de terre creuse des tunnels : l'air et l'eau peuvent entrer dans la terre."],["👀","Le ver de terre n'a pas d'yeux, mais il sent la lumière."]],
-  snail:[["🐌","L'escargot porte sa maison sur son dos !"],["✨","L'escargot laisse une trace brillante pour glisser plus facilement."]],
-  seeds:[["🌱","Une graine cache un tout petit bébé plante, qui attend l'eau et la chaleur pour sortir."]],
-  can:[["💧","Les plantes boivent l'eau par leurs racines, comme avec une paille !"]],
-  sun:[["☀️","Les plantes fabriquent leur nourriture avec la lumière du soleil."]],
-  tomato:[["🍅","La tomate est un fruit ! Elle pousse à partir d'une petite fleur jaune."]],
-  greenhouse:[["🏡","Dans la serre, les vitres gardent la chaleur du soleil : les plantes ont chaud même au printemps."]],
-  birdhouse:[["🐦","Un nichoir, c'est une petite maison où les oiseaux peuvent faire leur nid."]],
-  chickadee:[["❄️","La mésange reste chez nous tout l'hiver, même quand il fait très froid !"]],
-  strawberry:[["🍓","La fraise porte ses graines à l'extérieur : regarde les petits points !"]],
-  lavender:[["💜","La lavande sent très bon… et les abeilles l'adorent."]],
-  lantern:[["🔆","Cette lanterne se recharge avec le soleil le jour, et s'allume toute seule la nuit."]],
-  miam:[["🌼","Miam plante des graines : dans quelques semaines, elles deviendront des fleurs !"]]
-};
-const KITCHEN_FACTS={
-  cow:[["🐄","Le lait vient de la vache. Avec le lait, on fait aussi le beurre et le fromage !"]],
-  milk:[["🥛","Le lait aide à avoir des os solides."]],
-  hen:[["🐔","Une poule pond environ un œuf par jour."]],
-  eggs:[["🥚","Dans un œuf, le jaune est la réserve de nourriture du poussin."]],
-  bee:[["🐝","Les abeilles fabriquent le miel avec le nectar des fleurs."]],
-  honey:[["🍯","Pour remplir un pot de miel, les abeilles visitent des millions de fleurs !"]],
-  oven:[["🔥","Dans le four, la chaleur fait gonfler la pâte grâce à de toutes petites bulles d'air."]],
-  bread:[["🍞","Le pain, c'est de la farine, de l'eau, du sel et de la levure, qui le fait gonfler."]],
-  flour:[["🌾","La farine vient du blé : on écrase les grains pour en faire une poudre blanche."]],
-  butter:[["🧈","Le beurre se fait en battant très longtemps la crème du lait."]],
-  cookies:[["🍪","Le chocolat vient d'une fève qui pousse sur un arbre : le cacaoyer."]],
-  strawberry:[["🍓","La fraise porte ses graines à l'extérieur !"]],
-  blueberry:[["🫐","Les bleuets poussent beaucoup au Québec, surtout au Lac-Saint-Jean !"]],
-  banana:[["🍌","Les bananes poussent en grappes, la tête vers le haut !"]],
-  cat:[["🐱","Le chat ronronne quand il est content."]],
-  pin:[["🥖","Le rouleau aplatit la pâte pour faire des biscuits bien plats."]],
-  miam:[["📜","Une recette, c'est comme un mode d'emploi : on la lit pour savoir quoi faire !"]]
-};
+/* Découvertes de la gare, du musée et de l'école. Une découverte peut avoir 2 textes : le 1er utilise le prénom ({nom}),
+   le 2e sert quand aucun prénom n'est enregistré. */
 const SCENES={
   chenille:{img:()=>JARDIN_SCENE_IMG,body:"cBody",facts:GARDEN_FACTS,play:()=>startCat(),icon:()=>JHEAD.joie,label:"La chenille",hello:"Bienvenue au jardin ! Touche les animaux et les plantes pour découvrir leurs secrets.",
     hot:[["birdhouse",3.4,6.5,14.6,13.7],["chickadee",1,23,12.7,5.6],["sunflower",8.3,25.4,23,16.3],["sun",67.4,5.9,17,11.7],["greenhouse",84,15,16,24],["lantern",72.8,26,8.1,9.1],
          ["tomato",75.2,39,18.5,10.4],["lavender",90.8,45.6,9.2,8.4],["ladybug",4.4,45.2,11.3,5],["bee",60,44.9,12.7,8],["miam",23.4,50.8,23.4,15],["seeds",39,66,19.5,9.5],
          ["worm",20.5,70.6,19.3,8.5],["can",69.3,63.8,28,13],["snail",77,78,17.6,8.6],["strawberry",0,77.5,9.8,7]]},
+  train:{img:()=>GARE_SCENE_IMG,body:"tBody",facts:STATION_FACTS,play:()=>startTrain(),icon:()=>TR_LOCO,label:"Le train des syllabes",clock:[23.6,13.35,20.6],hello:"Bienvenue à la gare ! Touche l'horloge pour apprendre à lire l'heure, ou touche les objets pour découvrir leurs secrets.",
+    hot:[["lamp",0,4,17,14],["sign",24,27,33,7],["flowers",9,33,21,10],["mountain",55,15,40,12],["forest",44,30,22,14],["lamp",49,42,6,14],["wagons",49,47,16,14],
+         ["train",65,36,35,32],["bench",0,63,28,9],["chickadee",0,58.5,12,6.5],["suitcase",11,71,21,14],["miam",31,52,25,30],["rails",66,68,34,12],["line",58,66,22,26],["flowers",0,80,40,20],["clock",22,11.5,25,15.5]]},
+  musee:{img:()=>MUSEE_SCENE_IMG,body:"mBody",facts:MUSEUM_FACTS,play:()=>startMusee(),icon:()=>MU_FRAME,label:"Le musée des mots",hello:"Bienvenue au musée ! Touche les trésors pour découvrir leurs secrets.",
+    hot:[["roof",28,0,22,9],["whale",48,2,52,20],["dino",0,7,58,48],["leaf",61,27,8,13],["ammonite",45,30,10,12],["butterfly",72,28,8,12],["painting",87,28,13,17],
+         ["globe",44,42,26,15],["knight",75,43,15,18],["sign",12,58,15,6],["plant",0,62,13,25],["vase",73,58,10,14],["crystal",85,58,15,14],["miam",30,51,32,29],
+         ["ammonite",83,76,17,13],["butterfly",8,79,18,9],["bluejay",19,85,22,10]]},
+  ecrire:{img:()=>ECOLE_SCENE_IMG,body:"wBody",facts:SCHOOL_FACTS,play:()=>startWrite(),icon:null,label:"Écrire des mots",hello:"Bienvenue à l'école ! Touche les objets pour découvrir leurs secrets.",
+    hot:[["tree",0,0,30,28],["lamp",59,6,18,10],["sign",53,14,42,14],["bus",0,37,24,13],["playground",22,37,19,11],["kids",8,45,32,12],["door",45,30,12,28],["classroom",61,32,30,21],
+         ["backpacks",77,55,23,13],["boots",79,70,21,10],["bench",0,60,14,14],["apple",8,70,13,9],["books",0,77,30,9],["miam",27,51,35,30],
+         ["chalk",60,76,24,10],["chalk",55,84,45,13],["leaves",62,93,38,7]]},
   ecouter:{img:()=>CUISINE_SCENE_IMG,body:"lBody",facts:KITCHEN_FACTS,play:()=>startListen(),icon:()=>KIT_COOKIE,label:"Les biscuits",hello:"Bienvenue dans la cuisine ! Touche les objets pour découvrir leurs secrets.",
     hot:[["cow",5.3,27.2,25,11.7],["hen",67,27.8,10.6,7.5],["bee",81.8,23,11.7,5.7],["honey",82.9,31.1,13.3,7.8],["oven",72.3,39.5,27.7,18.5],["miam",36,40,38,20],
          ["milk",22.8,50.5,12.3,15.9],["cat",7.4,55,15.3,8.5],["bread",78.6,58,21.4,9],["eggs",0,64.6,25,10.2],["flour",24.4,65.5,22.3,13],["cookies",51,68.2,49,13],
          ["butter",1,78,19,8.6],["pin",29.2,79,35,8.9],["banana",90,75.4,10,8.4],["strawberry",73.3,83.1,17,7.8],["blueberry",87,90.3,13,7.3]]}
 };
+/* ===== L'horloge de la gare : apprendre à lire l'heure avec les aiguilles =====
+   Chaque toucher montre une nouvelle heure (heure juste, parfois « et demie ») et Miam explique où sont les aiguilles. */
+const CLOCK_SVG=()=>{let n="";for(let h=1;h<=12;h++){const a=h*Math.PI/6,x=100+70*Math.sin(a),y=100-70*Math.cos(a);n+=`<text x="${x.toFixed(1)}" y="${(y+7).toFixed(1)}" text-anchor="middle">${h}</text>`}
+  return `<svg viewBox="0 0 200 200" aria-hidden="true"><g class="cnum">${n}</g>
+  <g class="chand ch-h"><path d="M100 104 L96 100 L100 52 L104 100 Z"/></g>
+  <g class="chand ch-m"><path d="M100 106 L97.5 100 L100 26 L102.5 100 Z"/></g>
+  <circle cx="100" cy="100" r="6" class="cpin"/></svg>`};
+function addClock(wrap,[l,t,w]){const c=el("div","sclock",CLOCK_SVG());c.style.cssText=`left:${l}%;top:${t}%;width:${w}%`;wrap.appendChild(c);setClock(c,load("gareH",[3,0]))}
+function setClock(c,[h,m]){c.querySelector(".ch-h").style.transform=`rotate(${(h%12)*30+m/2}deg)`;c.querySelector(".ch-m").style.transform=`rotate(${m*6}deg)`;c.dataset.h=h;c.dataset.m=m}
+function clockTap(wrap){
+  const c=wrap.querySelector(".sclock");if(!c)return;
+  const old=+c.dataset.h;let h;do{h=1+Math.floor(Math.random()*12)}while(h===old);
+  const m=Math.random()<.3?30:0;setClock(c,[h,m]);save("gareH",[h,m]);
+  const H=h===1?"une heure":h+" heures",nx=h===12?1:h+1;
+  const t=m===0?`La petite aiguille montre le ${h}. La grande aiguille montre le 12. Il est ${H} !`
+    :`La grande aiguille montre le 6 : c'est la demie. La petite aiguille est entre le ${h} et le ${nx}. Il est ${H} et demie !`;
+  let f=wrap.querySelector(".mfact");if(!f){f=el("div","mfact");wrap.appendChild(f)}
+  f.innerHTML=`<span class="bigclock">${CLOCK_SVG()}</span><p>${t}</p>`;f.classList.remove("on");void f.offsetWidth;f.classList.add("on");
+  {const bc=f.querySelector(".bigclock");bc.querySelectorAll(".chand").forEach(x=>x.style.transition="none");setClock(bc,[h,m])}   /* la même heure, en grand, dans la bulle */
+  f.onclick=()=>f.classList.remove("on");clearTimeout(f._t);f._t=setTimeout(()=>f.classList.remove("on"),12000);
+  SEQ++;try{if(curAudio)curAudio.pause()}catch(_){}speak(t);
+}
 function renderScene(g){
   const S_=SCENES[g],body=$(S_.body);body.innerHTML="";
   const wrap=el("div","scenewrap");
   const img=document.createElement("img");img.className="sceneimg";img.src=S_.img();img.alt=PLACES[g].n;img.draggable=false;wrap.appendChild(img);
   S_.hot.forEach(([k,l,t,w,h])=>{const b=el("button","wchot fact","");b.type="button";b.setAttribute("aria-label",k);b.style.cssText=`left:${l}%;top:${t}%;width:${w}%;height:${h}%`;
-    b.onclick=e=>{e.preventDefault();SFX.tap();showFact(wrap,k,S_.facts)};wrap.appendChild(b)});
-  const ic=S_.icon();
+    b.onclick=e=>{e.preventDefault();SFX.tap();if(k==="clock")clockTap(wrap);else showFact(wrap,k,S_.facts)};wrap.appendChild(b)});
+  if(S_.clock)addClock(wrap,S_.clock);
+  const ic=S_.icon?S_.icon():null;
   const play=el("button","playcard",`${ic?`<img src="${ic}" alt="">`:""}<span><b>▶️ Jouer</b><small>${S_.label}</small></span>`);
   play.onclick=()=>{SFX.tap();mzAnim(play,"mz-pop");SEQ++;try{speechSynthesis.cancel()}catch(e){}setTimeout(S_.play,180)};
   wrap.appendChild(play);body.appendChild(wrap);
@@ -3691,14 +3674,14 @@ function parcoursEnd(){
 
 /* ---------- Carte d'aventure ---------- */
 const PLACES={
-  train:{n:"La gare",e:"🚂",bg:"#DCE3EE",t:"🚂 Le train",start:()=>startTrain()},
+  train:{n:"La gare",e:"🚂",bg:"#DCE3EE",t:"🚂 Le train",start:()=>renderScene("train")},
   fusee:{n:"La base spatiale",e:"🚀",bg:"#C9D3FF",t:"🚀 La fusée",start:()=>startRocket()},
   sons:{n:"L'atelier des sons",e:"🔊",bg:"#F1D9FF",t:"🎧 Les sons",start:()=>startSons()},
   lire:{n:"La bibliothèque",e:"📚",bg:"#F6E1C8",t:"📖 Lire",start:()=>startRead()},
   chenille:{n:"Le jardin",e:"🐛",bg:"#CFF2C2",t:"🐛 Le jardin",start:()=>renderScene("chenille")},
   ecouter:{n:"La cuisine",e:"🍪",bg:"#FFD7BF",t:"🍪 La cuisine",start:()=>renderScene("ecouter")},
-  ecrire:{n:"L'école",e:"✏️",bg:"#CFE8FF",t:"✏️ Écrire",start:()=>startWrite()},
-  musee:{n:"Le musée",e:"🖼️",bg:"#FFF1C9",t:"🖼️ Le musée",start:()=>startMusee()}
+  ecrire:{n:"L'école",e:"✏️",bg:"#CFE8FF",t:"✏️ Écrire",start:()=>renderScene("ecrire")},
+  musee:{n:"Le musée",e:"🖼️",bg:"#FFF1C9",t:"🖼️ Le musée",start:()=>renderScene("musee")}
 };
 const MAP_ORDER=["train","fusee","sons","lire","MIAM","chenille","ecouter","ecrire","musee"];
 const SECTIONS=["home","ecouter","lire","ecrire","fusee","train","sons","chenille","musee"];
