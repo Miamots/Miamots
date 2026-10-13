@@ -102,3 +102,8 @@ Si vous remplacez aussi d'autres fichiers (icônes, police, images…), augmente
 ## Partager avec des amis
 
 Envoyez-leur simplement l'adresse. Chaque téléphone a ses propres données : leurs enfants ont leurs propres étoiles et leur propre portrait.
+
+## Statistiques anonymes
+Tableau de bord : https://miamots.goatcounter.com (connexion avec le compte GoatCounter).
+Chaque partie envoie seulement : le jeu, « fini » ou « arrêté après N manches », et la durée par tranche.
+Jamais de prénom, de courriel ni de cookie. Pour couper l'envoi sur un appareil : Réglages › 📊 Statistiques anonymes › Non.

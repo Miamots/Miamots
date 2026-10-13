@@ -1,7 +1,7 @@
 /* Miamots : fonctionne aussi sans Internet.
    La page principale est toujours redemandée en ligne d'abord (pour recevoir les mises à jour),
    les autres fichiers sont gardés en cache. */
-const VERSION = "miamots-v70";
+const VERSION = "miamots-v73";
 const FILES = [
   "./", "index.html", "style.css", "reglages.js", "donnees.js", "app.js", "manifest.webmanifest", "xlsx.full.min.js",
   "fonts/andika-latin-400-normal.woff2", "fonts/andika-latin-700-normal.woff2",
@@ -32,6 +32,8 @@ self.addEventListener("fetch", e => {
     );
     return;
   }
+  /* statistiques anonymes (GoatCounter) et autres sites : jamais gardés en cache */
+  if (new URL(req.url).origin !== location.origin) return;
   /* code et style de l'app : toujours la version en ligne d'abord (pour rester d'accord avec index.html), sinon le cache */
   const u = new URL(req.url);
   if (u.origin === location.origin && /\/(app|donnees|reglages)\.js$|\/style\.css$/.test(u.pathname)) {

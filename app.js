@@ -110,8 +110,8 @@ const curPitch=()=>{try{return +CFG.pitch||1}catch(e){return 1}};
 const curLang=()=>frVoice&&frVoice.lang?frVoice.lang.replace("_","-"):"fr-FR";
 if(hasVoice){pickVoice(); speechSynthesis.onvoiceschanged=()=>{pickVoice();try{if($("settings").open)renderVoices()}catch(e){}};}
 else document.getElementById("novoice").style.display="block";
-/* Mots que la synthèse lit mal : « os » serait lu « o » */
-const PRON={os:"oss",vis:"viss",dauphin:"dôfin"};
+/* Mots que la synthèse lit mal : « os » serait lu « o », et « oss » est épelé « o-s-s » → « osse » */
+const PRON={os:"osse",vis:"visse",dauphin:"dôfin"};
 const PRON_RE=new RegExp("(^|[^\\p{L}'’])("+Object.keys(PRON).join("|")+")(?=$|[^\\p{L}])","gu");
 /* Trop de touches très rapides sur les réponses : Miam invite à prendre son temps */
 {const ANS=".plate,.cookie,.wordbtn,.baby,.vinyl,.sndopt,.catnum,.choices button,.pdbtns button";let taps=[],calm=0,calmLast=null;
@@ -311,6 +311,7 @@ function givePhoto(why){
 }
 function speakAfter(t,q,sl){waitQuiet(6000).then(()=>speak(t,q,sl))}
 function party(body,onAgain,line,extra){
+  try{gcEnd(true)}catch(e){}
   body.innerHTML="";
   /* Autocollant suivant : on remplit les pages dans l'ordre, puis chaque autocollant devient doré, puis médailles */
   let sticker=null,kind="new",pageDone=null;
@@ -497,7 +498,12 @@ function closeness(p,t){
   if(near(NEAR_C,p[0],t[0])&&near(NEAR_V,p[1],t[1])) return 1;
   return 0;
 }
-const NO_SYL_C=["x","w","h","gn"],NO_SYL_V=["am","em","om","im","ill","ail","eil","euil","ouil"];
+const NO_SYL_C=["x","w","h","gn"],NO_SYL_V=["y","am","em","om","im","ill","ail","eil","euil","ouil"];
+/* Deux syllabes qui se disent pareil (fo / fau, fè / fai, fe / feu) ne sont jamais proposées ensemble */
+const sndKey=x=>{x=(typeof PH_MAP!=="undefined"&&PH_MAP[x])||x;return x==="y"?"i":x==="eu"||x==="œu"?"e":x};
+const homo=(a,b)=>a.length===b.length&&a.every((x,i)=>sndKey(x)===sndKey(b[i]));
+/* Voyelles qui ont une autre écriture plus simple : jamais dictées seules dans une syllabe (on ne peut pas deviner au, ai, en…) */
+const AMBIG_V=["y","au","eau","ai","ei","ê","en","em","ain","ein","im","om","œu"];
 function sylPool(){const p=[];selCons().filter(c=>!NO_SYL_C.includes(c)).forEach(c=>selVoy().filter(v=>!NO_SYL_V.includes(v)).forEach(v=>{if(!blocked(c,v))p.push([c,v])}));return p}
 function startListen(){L.round=0;L.first=true;nextListen()}
 function nextListen(){
@@ -516,13 +522,13 @@ function nextListen(){
   let vc=false;const vp=vcPool();
   if(useVC(lvl)&&vp.length>=2&&Math.random()<.35){vc=true;do{t=rnd(vp)}while(vp.length>1&&t.join("")===L.last)}
   L.target=t;L.last=t.join("");L.locked=false;L.err=0;L.wrong=[];L.vc=vc;
-  const others=vc?(()=>{const sw=x=>[x[1],x[0]];const o=shuffle(vp.filter(p=>p.join("")!==t.join(""))).map(p=>({p,s:closeness(sw(p),sw(t))})).sort((a,b)=>b.s-a.s).map(o=>o.p);
+  const others=vc?(()=>{const sw=x=>[x[1],x[0]];const o=shuffle(vp.filter(p=>p.join("")!==t.join("")&&!homo(p,t))).map(p=>({p,s:closeness(sw(p),sw(t))})).sort((a,b)=>b.s-a.s).map(o=>o.p);
       const rev=[t[1],t[0]];if(sylPool().some(p=>p.join("")===rev.join(""))&&lvl>=2)o.unshift(rev);
       return o.slice(0,nOpt-1)})()
-    :shuffle(pool.filter(p=>p.join("")!==t.join("")))
+    :shuffle(pool.filter(p=>p.join("")!==t.join("")&&!homo(p,t)))
     .map(p=>({p,s:closeness(p,t)})).filter(o=>o.s>0||lvl===1)
     .sort((a,b)=>lvl===1?(Math.abs(a.s-1.5)-Math.abs(b.s-1.5)):b.s-a.s).slice(0,nOpt-1).map(o=>o.p);
-  if(others.length<nOpt-1) shuffle(pool.filter(p=>p.join("")!==t.join("")&&!others.includes(p))).slice(0,nOpt-1-others.length).forEach(p=>others.push(p));
+  if(others.length<nOpt-1) shuffle(pool.filter(p=>p.join("")!==t.join("")&&!homo(p,t)&&!others.some(o=>homo(o,p))&&!others.includes(p))).slice(0,nOpt-1-others.length).forEach(p=>others.push(p));
   const opts=shuffle([t,...others]);
 
   body.innerHTML="";body.appendChild(head("ecouter",L.round));
@@ -597,7 +603,7 @@ const isMuteG=(w,i)=>!!(w&&w.mg&&w.mg.has(i));
 function sylHTML(w,si){const g=w.s[si],b=gIdx(w,si);return g.map((x,j)=>isMuteG(w,b+j)?`<span class="mute">${escH(x)}</span>`:escH(x)).join("")}
 function readG(w){return w.s.flat().filter((g,i)=>!isMuteG(w,i))}
 const weekOk=w=>inWeeks(w)&&(CFG.weeksSounds!=="coches"||knownW(w));
-const soundWords=()=>WORDS.filter(w=>!HIDDEN.has(w.w)&&!(w.outil&&!inWeeks(w))&&(CFG.onlyWeeks?weekOk(w):(weekOk(w)||(!w.weekOnly&&(w.custom||knownW(w))))));
+const soundWords=()=>WORDS.filter(w=>!HIDDEN.has(w.w)&&w.ty!=="p"&&!(w.outil&&!inWeeks(w))&&(CFG.onlyWeeks?weekOk(w):(weekOk(w)||(!w.weekOnly&&(w.custom||knownW(w))))));
 /* Structure écrite : C = consonne, V = voyelle (ou, on, ch… comptent pour un). Le e final muet n'est pas compté. */
 const STRUCTS=[["CV","dé, rue"],["CVC","mur, lune"],["CVCV","lama, vélo"],["CVCVC","tomate, salade"],["CVCVCV","lavabo, numéro"],["CCV","sons doubles : clé, table"],["autre","os, tortue, avion"]];
 let structs=new Set(load("structs",STRUCTS.map(x=>x[0])));
@@ -621,6 +627,7 @@ const CFG_DEF=[
  ["ecrireKb","✏️ Écrire : clavier",[["auto","Auto"],["reduit","Réduit"],["complet","Complet"]]],
  ["vc","🔄 Syllabes inversées (il, ar, of) : cuisine et école",[["auto","Auto (dès le niveau 2)"],["oui","Oui"],["non","Non"]]],
  ["voixMiamots","🎧 Sons enregistrés de Miamots",[["oui","Utiliser la voix Miamots"],["non","Voix du téléphone seulement"]]],
+ ["stats","📊 Statistiques anonymes (temps par jeu, jeux arrêtés ; jamais de nom ni de courriel)",[["oui","Oui"],["non","Non"]]],
  ["weeksSounds","📅 Mots de la semaine",[["coches","Seulement avec les sons cochés"],["tous","Tous, même avec d'autres sons"]]]
 ];
 if(!load("glv3",false)){CFG.glVoice="auto";save("cfg",CFG);save("glv3",true)}
@@ -954,7 +961,7 @@ function renderFirstSyl(lvl,body){
   const t=w.s[0],n=cfgN("lireN",lvl===1?3:4);
   const vow=shuffle(SV.filter(v=>v!==t[1]&&sel.has(v)&&!blocked(t[0],v)));
   let others=vow.map(v=>[t[0],v]);
-  if(others.length<n-1)others=others.concat(shuffle(sylPool().filter(g=>g.length===2&&g[1]===t[1]&&g[0]!==t[0])));
+  if(others.length<n-1)others=others.concat(shuffle(sylPool().filter(g=>g.length===2&&g[1]===t[1]&&g[0]!==t[0]&&!homo(g,t))));
   const opts=shuffle([t,...others.slice(0,n-1)]);
   const lsc=el("div","lscene");body.appendChild(lsc);
   const scene=el("div","scene"),m=makeMiam("lire");scene.append(m,el("div","lbub","Par quelle syllabe commence ce mot ?"));lsc.appendChild(scene);
@@ -979,7 +986,8 @@ function renderSylHear(lvl,body){
   if(pool.length<3){body.appendChild(el("p","instr","Il faut cocher quelques sons de plus dans les réglages."));return}
   let t;do{t=rnd(pool)}while(pool.length>3&&t.join("")===R.last);R.last=t.join("");R.locked=false;let err=0;
   const n=cfgN("lireN",lvl===1?3:4),key=x=>PH_MAP[x]||x;
-  const sameSound=g=>key(g[0])===key(t[0])&&key(g[1])===key(t[1]);
+  const vk=x=>{x=key(x);return x==="eu"||x==="œu"?"e":x};   /* « fe » et « feu » : presque pareils à l'oreille, jamais proposés ensemble */
+  const sameSound=g=>key(g[0])===key(t[0])&&vk(g[1])===vk(t[1]);
   const others=pool.filter(g=>g.join("")!==t.join("")&&!sameSound(g)).map(g=>({g,s:(g[0]===t[0]?3:0)+(g[1]===t[1]?3:0)+closeness(g,t)+Math.random()*1.5})).sort((a,b)=>b.s-a.s).map(o=>o.g);
   const opts=shuffle([t,...others.slice(0,n-1)]);
   const lsc=el("div","lscene");body.appendChild(lsc);
@@ -1109,7 +1117,7 @@ function nextWrite(){
   const lvlC=progAuto()&&PROG?(curStep().p==="syl"||Math.random()<.4?1:2):lvl;
   if(!w&&lvlC===1){
     let pool=sylPool().filter(g=>["a","i","o","u","é"].includes(g[1]));
-    if(pool.length<3)pool=sylPool();
+    if(pool.length<3)pool=sylPool().filter(g=>!AMBIG_V.includes(g[1])&&!["c","k","qu","ph"].includes(g[0]));
     {const lg=pool.filter(g=>LONG_C.includes(g[0]));if(lg.length>=3)pool=lg}
     const ws=weekSylls().filter(g=>Array.from(g.join("")).length<=4);
     if(ws.length&&Math.random()<.7)pool=ws;
@@ -1475,7 +1483,7 @@ function nextTrain(){
   T.word=w;T.last=w.w;T.next=0;T.locked=false;T.err=0;
   const syls=w.s.map(g=>g.join(""));
   const nDis=CFG.trainPiege==="auto"?(lvl>=2?1:0):CFG.trainPiege==="non"?0:CFG.trainPiege==="oui"?1:+CFG.trainPiege;
-  const dis=shuffle(sylPool().filter(g=>!syls.includes(g.join("")))).slice(0,nDis);
+  const dis=shuffle(sylPool().filter(g=>!syls.includes(g.join(""))&&!w.s.some(s=>homo(s,g)))).slice(0,nDis);
   const cars=shuffle(w.s.map((g,si)=>({g,si})).concat(dis.map(g=>({g}))));T.pi=dis.length;
 
   body.innerHTML="";body.appendChild(head("train",T.round));
@@ -1656,6 +1664,22 @@ async function seq(parts){
 const PH_MAP={y:"i","ê":"è",ai:"è",ei:"è",au:"o",eau:"o",en:"an",am:"an",em:"an",un:"in",im:"in",ain:"in",ein:"in",om:"on","œu":"eu",qu:"k",c:"k","ç":"s",ph:"f",gu:"g",k:"k"};
 const VOWEL_G=new Set(["a","e","i","o","u","y","é","è","ê","ou","on","an","en","in","un","oi","eu","œu","ai","ei","au","eau","am","em","om","im"]);
 const hasPh=k=>!!getRec(k);
+/* Le e se dit « è » (ou « é ») quand il est suivi de deux consonnes, d'une consonne double, ou d'une consonne finale prononcée :
+   chef, sel, bec, serpent, ferme, dessin, guerre ; et devant des lettres muettes seulement : les, des, est.
+   Sinon c'est le son « e » : cheval, chemin, melon, fenêtre, devoir (les groupes bl, tr… ne ferment pas : re-pli). */
+const E_DBL=/^(ss|rr|ll|tt|pp|mm|nn|ff|cc|x)$/;
+function eOpen(w,i){
+  const fl=w.s.flat(),rest=[];
+  for(let j=i+1;j<fl.length;j++)if(!isMuteG(w,j)&&fl[j]!=="h")rest.push(fl[j]);
+  if(!rest.length)return i<fl.length-1;
+  const n1=rest[0],n2=rest[1];
+  if(VOWEL_G.has(n1))return false;
+  if(E_DBL.test(n1))return true;
+  if(n2===undefined)return true;
+  if(VOWEL_G.has(n2))return false;
+  if(/^[lr]$/.test(n2)&&/^[bcdfgptv]$/.test(n1))return false;
+  return true;
+}
 /* Suite des sons d'un mot : [{g, k, i}] (lettres muettes ignorées) ; null si un son manque */
 function phSeq(w){
   const fl=w.s.flat(),out=[];
@@ -1665,6 +1689,7 @@ function phSeq(w){
     if(g==="h")continue;
     if(g==="e"&&i===fl.length-1&&i>0)continue;               // e muet final : lune, fée
     let k=PH_MAP[g]||g;
+    if(g==="e"&&eOpen(w,i))k="è";             // chef, sel : ce n'est pas le son « e »
     if(g==="c"&&/^[eiéèêy]/.test(next))k="s";
     if(g==="g"&&/^[eiéèêy]/.test(next))k="j";
     if(g==="s"&&VOWEL_G.has(prev)&&VOWEL_G.has(next))k="z";  // rose
@@ -2212,7 +2237,7 @@ function renderSons(){
     items.forEach(({k,simple},i)=>{
       if(!sepDone&&!fo.has(k)&&!known.has(k)){sepDone=true;g.appendChild(el("div","sylsep","Plus tard :"))}
       if(k==="emuet"){const ok=sonsDone.includes(k),later=!emLessonOpen();
-        const b=el("button","sndvin simple"+(later&&!ok?" later":""),`${fo.has(k)?'<span class="star">⭐</span>':""}${ok?'<span class="ok">✅</span>':""}<span class="vinyl" style="--lab:#CFC8BB"><span>e</span></span><small>e muet</small>`);
+        const b=el("button","sndvin simple"+(later&&!ok?" later":""),`${fo.has(k)?'<span class="star">⭐</span>':""}${ok?'<span class="ok">✅</span>':""}<span class="vinyl" style="--lab:#CFC8BB"><span>e</span></span><small>lettres muettes</small>`);
         b.onclick=()=>{SFX.tap();if(!ok&&emWords().length<2){SEQ++;speak("Plus tard ! Quand tu sauras lire quelques mots, Miam te montrera ce secret.");return}S.k="emuet";S.step=0;S.simple=false;renderSons()};g.appendChild(b);return}
       const done=sonsDone.includes(k),L=LESSONS[k];
       const ex=simple?phLessonWords(k).yes[0]:null;
@@ -2234,7 +2259,7 @@ function renderSons(){
   S.i=0;S.err=0;S.locked=false;S.items=null;
   [stepDiscover,stepEar,stepSee,stepSyl,stepRead][S.step](box,L);
 }
-function nextStep(){S.step++;if(S.step>=(S.k==="emuet"?2:S.simple?4:5))return lessonDone();renderSons()}
+function nextStep(){S.step++;if(S.step>=(S.k==="emuet"?1:S.simple?4:5))return lessonDone();renderSons()}
 /* ===== Leçon « le e muet final » (Miamots_maitrise_V1-3 › enseignement_orthographique) =====
    1. on montre : lune, robe, tomate… le e ne s'entend pas, mais il s'écrit
    2. on pratique : « Comment s'écrit lune ? » lune / lun / luné (3 choix) */
@@ -2250,41 +2275,26 @@ function renderEmLesson(){
   const body=$("sBody");body.innerHTML="";
   const top=el("div","lesson-top");
   const back=el("button","card back","← Sons");back.onclick=()=>{SFX.tap();SEQ++;S.k=null;S.pick=true;renderSons()};
-  const st=el("div","steps");["👀","✏️"].forEach((ic,i)=>st.appendChild(el("span",i<S.step?"done":i===S.step?"cur":"",i<S.step?"✅":ic)));
+  const st=el("div","steps");["👀"].forEach((ic,i)=>st.appendChild(el("span",i<S.step?"done":i===S.step?"cur":"",i<S.step?"✅":ic)));
   top.append(back,st);body.appendChild(top);
   const box=el("div","");box.id="sStep";body.appendChild(box);
   S.i=0;S.ie=0;S.locked=false;S.items=null;S.EW=emWords();
-  (S.step===0?emDiscover:emPractice)(box);
+  emDiscover(box);
 }
 function emDiscover(box){
+  /* des mots lisibles avec un e muet final, et si possible un mot avec une autre lettre muette (radis, Jules) */
   const W=S.EW.slice(0,3);
-  box.appendChild(djRow("turn","Le <b>e</b> qu'on n'entend pas !"));
+  const oth=WORDS.filter(w=>w.bank&&w.e&&!HIDDEN.has(w.w)&&w.rq&&w.rq.every(knownKey)&&w.mute.size&&!W.includes(w)&&!(w.mute.size===1&&w.mute.has(Array.from(w.w).length-1)&&/e$/.test(w.w)));
+  if(oth.length)W.push(rnd(oth));
+  box.appendChild(djRow("turn","Les lettres qu'on n'entend pas !"));
   const ex=el("div","ex");
   W.forEach(w=>{const b=el("button","card exw",`${w.e} ${wordHTML(w)}`);b.onclick=()=>{SFX.tap();SEQ++;speak(w.w)};ex.appendChild(b)});
   box.appendChild(ex);
-  box.appendChild(el("p","instr","À la fin de ces mots, il y a un <b>e</b> : on ne l'entend pas, mais on l'écrit."));
-  const go=el("button","card btn","Je suis prêt ! →");go.onclick=()=>{SFX.yes();SEQ++;nextStep()};
+  box.appendChild(el("p","instr","Dans certains mots, il y a des lettres qu'on n'entend pas : ce sont des <b>lettres muettes</b>. Elles sont toutes pâles. On ne les lit pas, mais elles sont là !"));
+  const go=el("button","card btn","J'ai compris ! →");go.onclick=()=>{SFX.yes();SEQ++;nextStep()};
   const c=el("div","center");c.appendChild(go);box.appendChild(c);
   const w0=W[0];
-  seq(["Écoute :",w0?w0.w:"lune","On n'entend pas le e à la fin du mot. Mais on l'écrit ! Regarde : il est tout pâle."]);
-}
-function emPractice(box){
-  if(!S.items)S.items=shuffle(S.EW.slice(0,8)).slice(0,4);
-  if(S.i>=S.items.length||!S.items.length)return nextStep();
-  const w=S.items[S.i],base=w.w.slice(0,-1),opts=shuffle([w.w,base,base+"é"]);S.locked=false;
-  box.innerHTML="";box.appendChild(dotsN(S.i,S.items.length));
-  box.appendChild(djRow("point","Comment s'écrit ce mot ?"));
-  const pic=el("button","bigpic",w.e);pic.dataset.hint="1";pic.onclick=()=>{SEQ++;speak(w.w)};box.appendChild(pic);
-  const ch=el("div","choices"),msg=el("p","msg");
-  opts.forEach(o=>{const b=el("button","card wordbtn",escH(o));
-    b.onclick=async()=>{if(S.locked||b.disabled)return;
-      if(o===w.w){S.locked=true;SFX.yes();b.classList.add("good");addStar();
-        logA({g:"sons",etape:"e-muet",it:w.w,ok:1,f:S.ie?0:1,n:S.ie+1,nc:3});S.ie=0;
-        b.innerHTML=wordHTML(w);msg.textContent="Oui ! « "+w.w+" » s'écrit avec un e qu'on n'entend pas.";SEQ++;await speakAsync(w.w);await settle(500);S.i++;emPractice(box)}
-      else{S.ie++;SFX.no();b.classList.add("bad");b.disabled=true;msg.textContent=o.endsWith("é")?"Avec é, on entendrait « é » à la fin…":"Il manque le e muet à la fin !";SEQ++;speak(w.w)}};
-    ch.appendChild(b)});
-  box.append(ch,msg);
-  setTimeout(()=>{SEQ++;seq(S.i===0?["Comment s'écrit",w.w+" ?"]:[w.w])},250);
+  seq(["Écoute :",w0?w0.w:"lune","Dans certains mots, il y a des lettres qu'on n'entend pas. Ce sont des lettres muettes. Regarde : elles sont toutes pâles. On ne les lit pas, mais elles sont là !"]);
 }
 /* ===== Leçon d'un son simple (maternelle) : 1. découvrir 2. l'entendre 3. trouver l'image 4. trouver la lettre ===== */
 const PH_ICONS=["👀","👂","🖼️","🔤"];
@@ -2410,7 +2420,7 @@ function lessonDone(){
   const k=S.k;if(!sonsDone.includes(k)){sonsDone.push(k);save("sonsDone",sonsDone)}
   const body=$("sBody");
   const inGames=k==="emuet"||sel.has(k)||progAuto();
-  party(body,()=>{S.k=null;renderSons()},k==="emuet"?"Tu connais le e qu'on n'entend pas !":"Tu connais le son « "+k+" » !",k==="emuet"?null:inGames?null:{label:"➕ Ajouter « "+k+" » aux jeux",fn:b=>{sel.add(k);save("sel3",[...sel]);b.textContent="✅ Ajouté aux jeux";b.disabled=true;speak("Super ! Le son "+sndSay(k)+" est maintenant dans tous les jeux.")}});
+  party(body,()=>{S.k=null;renderSons()},k==="emuet"?"Tu connais les lettres qu'on n'entend pas !":"Tu connais le son « "+k+" » !",k==="emuet"?null:inGames?null:{label:"➕ Ajouter « "+k+" » aux jeux",fn:b=>{sel.add(k);save("sel3",[...sel]);b.textContent="✅ Ajouté aux jeux";b.disabled=true;speak("Super ! Le son "+sndSay(k)+" est maintenant dans tous les jeux.")}});
   const again=body.querySelector(".row button");if(again)again.textContent="🔊 Autres sons";
 }
 function stepDiscover(box,L){
@@ -2444,8 +2454,8 @@ function stepEar(box,L){
       S.locked=true;SFX.yes();b.classList.add("good");addStar();sonLog(S.ie||0);S.ie=0;
       const[x,y]=centerOf(b);sparks(x,y,10,["⭐","✨"]);
       msg.innerHTML=it.y?`Oui ! ${hl(it.w[0])}`:`Bravo ! Pas de « ${S.k} » dans ${word}.`;
-      it.y?speak("Oui ! "+word):seq(["Bravo, il n'y a pas de",{snd:S.k},"dans "+word]);
-      await wait(1700);S.i++;stepEar(box,L);
+      SEQ++;await (it.y?speakAsync("Oui ! "+word):seq(["Bravo, il n'y a pas de",{snd:S.k},"dans "+word]));
+      await settle(400);S.i++;stepEar(box,L);
     }else{
       S.ie=(S.ie||0)+1;SFX.no();b.classList.remove("bad");void b.offsetWidth;b.classList.add("bad");setTimeout(()=>b.classList.remove("bad"),500);
       msg.textContent="Écoute encore…";speak("Écoute bien : "+word);
@@ -2453,7 +2463,7 @@ function stepEar(box,L){
   };
   yes.onclick=()=>answer(yes,true);no.onclick=()=>answer(no,false);
   yn.append(yes,no);box.appendChild(yn);box.appendChild(msg);
-  setTimeout(()=>S.i===0?seq(["Est-ce que tu entends",{snd:S.k},"dans ce mot ?",word]):speak(word),250);
+  setTimeout(()=>S.i===0?seq(["Est-ce que tu entends",{snd:S.k},"dans ce mot ?",word]):seq([word]),250);
 }
 function stepSee(box,L){
   const yesW=shuffle(L.yes).slice(0,3),noW=shuffle(L.noSee||L.no).slice(0,3);
@@ -2494,8 +2504,8 @@ function stepSyl(box,L){
     b.onclick=async()=>{
       if(S.locked||b.disabled)return;
       if(o===t){S.locked=true;SFX.yes();b.classList.add("good");addStar();sonLog(S.ie||0);S.ie=0;const[x,y]=centerOf(b);sparks(x,y);
-        msg.textContent=rnd(PRAISE.filter(p=>!p.startsWith("Miam")));speak(sayStr(t));
-        await wait(1400);S.i++;stepSyl(box,L);if(S.i<S.items.length)setTimeout(()=>speak(sayStr(S.items[S.i][0])),200);}
+        msg.textContent=rnd(PRAISE.filter(p=>!p.startsWith("Miam")));SEQ++;await speakAsync(sayStr(t));
+        await settle(400);S.i++;stepSyl(box,L);if(S.i<S.items.length)setTimeout(()=>speak(sayStr(S.items[S.i][0])),200);}
       else{S.ie=(S.ie||0)+1;SFX.no();b.classList.add("bad");b.disabled=true;msg.textContent="« "+o+" »… Écoute encore.";speak(sayStr(o))}
     };
     ch.appendChild(b);
@@ -2518,7 +2528,7 @@ function stepRead(box,L){
     b.onclick=async()=>{
       if(S.locked||b.disabled)return;
       if(o===w){S.locked=true;SFX.yes();b.classList.add("good");addStar();sonLog(S.ie||0);S.ie=0;const[x,y]=centerOf(b);sparks(x,y);
-        msg.textContent="Oui ! « "+plain(w[0])+" »";speak(plain(w[0]));await wait(1500);S.i++;stepRead(box,L);}
+        msg.textContent="Oui ! « "+plain(w[0])+" »";SEQ++;await speakAsync(plain(w[0]));await settle(400);S.i++;stepRead(box,L);}
       else{S.ie=(S.ie||0)+1;SFX.no();b.classList.add("bad");b.disabled=true;msg.textContent="Relis doucement…";speak("Relis doucement.")}
     };
     pics.appendChild(b);
@@ -2654,7 +2664,7 @@ function track(item,errs){
 /* Historique détaillé de chaque essai (sert à toutes les analyses) */
 let LOG=load("log",[]);
 function logA(e){
-  e.t=Date.now();LOG.push(e);
+  e.t=Date.now();LOG.push(e);try{if(GCS&&e.ok)GCS.n++}catch(_){}
   if(LOG.length>4000)LOG.splice(0,LOG.length-4000);
   save("log",LOG);
   try{if(progAuto()&&PROG)progCheck()}catch(err){errLog(err,"progression")}
@@ -2837,7 +2847,7 @@ function masteryCard(){
   rows.forEach(([g,k])=>{t+=`<tr><td><b>${escH(g)}</b></td>${cell("son",k)}${cell("fus",k)}${cell("lec",k)}${cell("ecr",k)}</tr>`});
   const em=compStatus("emf","");
   const ph=compStatus("phr","");
-  t+=`</table><p class="rlegend">✏️ e muet final (écriture) : ${ST_ICON[em.st][0]} ${ST_ICON[em.st][1]}</p>`;
+  t+=`</table><p class="rlegend">🤫 Lettres muettes : ${sonsDone.includes("emuet")?"✅ explication vue":"pas encore vue (elle arrive après quelques mots lus seul)"}</p>`;
   t+=`<p class="rlegend">📖 Phrases (lire et comprendre) : ${ST_ICON[ph.st][0]} ${ST_ICON[ph.st][1]}${ph.n?"":(()=>{try{return phrOpen()?" — ouvertes":" — s'ouvriront après quelques mots lus seul"}catch(e){return ""}})()}</p>`;
   t+=`<p class="rlegend"><b>👂 L'oreille</b> : `+OREILLE.map(o=>{const s=compStatus("ear",o.k);return ST_ICON[s.st][0]+" "+o.t.replace(/ \(.*\)$/,"")}).join(" · ")+`</p></details></div>`;
   return t;
@@ -2867,8 +2877,8 @@ function emLessonOpen(){
   if(!keys.some(k=>stAtLeast(compStatus("lec",k).st,"en_pratique")))return false;
   return emWords().length>=EM_MIN_LIST;
 }
-/* e muet final : la leçon faite et au moins une réussite autonome ouvrent l'écriture des mots concernés */
-const emfReady=()=>sonsDone.includes("emuet")&&stAtLeast(compStatus("emf","").st,"en_pratique");
+/* e muet final : l'explication des lettres muettes vue ouvre l'écriture des mots concernés (le e reste pâle et proposé) */
+const emfReady=()=>sonsDone.includes("emuet");   /* l'explication suffit : pas d'exercice d'orthographe sur le e muet */
 let PROG_NEW=null;
 /* ----- L'oreille : une échelle à part, qui ne bloque jamais le code ----- */
 const OREILLE=[
@@ -3664,6 +3674,7 @@ function renderParcours(){
   speak(talk);
 }
 function parcoursEnd(){
+  try{gcStart("home");gcSend("Parcours du jour · fini")}catch(e){}
   SECTIONS.forEach(x=>$(x).hidden=x!=="home");current="home";document.body.classList.remove("wc-home");
   const body=$("hBody");body.innerHTML="";$("gamebar").hidden=false;$("gameTitle").textContent="🗓️ Le parcours du jour";
   const p=el("div","party");const m=makeMiam("fete");m.style.margin="0 auto";p.appendChild(m);
@@ -3694,7 +3705,7 @@ function parcHowto(id){
   const P=PARC||{},ea=earI(),sons=stageSons();
   if(id==="sons"){
     if(P.lesson&&P.lesson!=="emuet"&&!sonsDone.includes(P.lesson))return "Miam va te faire découvrir un nouveau son : « "+P.lesson+" ». Écoute bien, puis réponds à ses questions !";
-    if(P.lesson==="emuet"&&!sonsDone.includes("emuet"))return "Miam va te montrer un secret des mots : le e qu'on n'entend pas, mais qu'on écrit !";
+    if(P.lesson==="emuet"&&!sonsDone.includes("emuet"))return "Miam va te montrer un secret des mots : les lettres qu'on n'entend pas. Elles sont toutes pâles !";
     return P.act==="fus"?(ea<6?"Miam dit un mot en petits morceaux. Écoute bien et trouve le mot !":"Miam dit les petits sons d'un mot. Écoute bien et trouve le mot !"):
            P.act==="pd"?(ea===3?"Miam dit un mot. Trouve le mot qui finit pareil, qui rime !":"Écoute deux sons : sont-ils pareils ou différents ?"):
            "Écoute le son de Miam et trouve le mot qui commence par ce son !";
@@ -3715,6 +3726,7 @@ function parcIntro(id){
 function go(id){
   if(PARC_ACTIVE&&PARC&&!PARC.done&&PARC.steps[PARC.i]===id&&id!=="home"){PARC.intro=PARC.intro||{};if(!PARC.intro[PARC.i]){PARC.intro[PARC.i]=1;save("parc",PARC);return parcIntro(id)}}
   if(hasVoice){try{speechSynthesis.cancel()}catch(e){}}
+  try{gcStart(id)}catch(e){}
   current=id;SECTIONS.forEach(x=>$(x).hidden=x!==id);
   if(id!=="home")document.body.classList.remove("wc-home");
   document.body.classList.toggle("wc-train",id==="train");
@@ -4713,6 +4725,30 @@ setInterval(()=>{
   const d=new Date().toLocaleDateString("fr-CA"),T=TIME[d]||(TIME[d]={}),g=current||"home";
   T._=(T._||0)+15;T[g]=(T[g]||0)+15;save("time",TIME);
 },15000);
+/* ===== Statistiques anonymes (GoatCounter : https://miamots.goatcounter.com) =====
+   Envoyé : le nom du jeu, « fini » ou « arrêté après N manches », et la durée par tranche (« 1 à 3 min »).
+   Jamais de prénom, de courriel, de réponse de l'enfant ni de cookie. Réglage « 📊 Statistiques anonymes » (Oui / Non).
+   Rien n'est envoyé hors ligne, ni depuis l'ordinateur (file://). */
+const GC_URL="https://miamots.goatcounter.com/count";
+const GC_NOMS={train:"Train",fusee:"Fusée",sons:"Sons",chenille:"Jardin",ecouter:"Cuisine",lire:"Lire",ecrire:"Écrire",musee:"Musée"};
+const gcOn=()=>CFG.stats!=="non"&&location.protocol==="https:";
+let GCS=null;const gcQ=[];
+function gcLoad(){if(!gcOn()||window.__gcl)return;window.__gcl=1;
+  const s=document.createElement("script");s.async=true;s.dataset.goatcounter=GC_URL;s.src="https://gc.zgo.at/count.js";
+  s.onload=()=>{gcQ.splice(0).forEach(gcSend)};document.head.appendChild(s)}
+function gcSend(path){if(!gcOn())return;gcLoad();
+  try{if(window.goatcounter&&window.goatcounter.count)window.goatcounter.count({path,title:path,event:true});else if(gcQ.length<30)gcQ.push(path)}catch(e){}}
+const gcDuree=s=>s<60?"moins d'1 min":s<180?"1 à 3 min":s<300?"3 à 5 min":s<600?"5 à 10 min":"plus de 10 min";
+function gcEnd(done){
+  if(!GCS)return;const G=GCS,s=(Date.now()-G.t0)/1000,nom=GC_NOMS[G.g];GCS=null;
+  if(done)gcSend(nom+" · fini · "+gcDuree(s));
+  else if(G.n>0)gcSend(nom+" · arrêté après "+G.n+" manche"+(G.n>1?"s":"")+" · "+gcDuree(s));
+  else if(!G.again&&s>=3)gcSend(nom+" · quitté sans jouer");
+  if(done)GCS={g:G.g,t0:Date.now(),n:0,again:true};   /* « Encore » : une nouvelle partie commence */
+}
+function gcStart(id){if(GCS&&GCS.g===id)return;gcEnd(false);if(GC_NOMS[id])GCS={g:id,t0:Date.now(),n:0}}
+document.addEventListener("visibilitychange",()=>{if(document.hidden)gcEnd(false);else if(current&&GC_NOMS[current])gcStart(current)});
+gcLoad();
 renderStars(false);go("home");
 $("openWizard").onclick=()=>{closeSettings();setTimeout(()=>openWelcome(1),50)};
 /* ----- Vidéo d'introduction : Miam arrive sur la Terre ----- */
