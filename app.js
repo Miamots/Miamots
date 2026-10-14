@@ -84,7 +84,7 @@ const ROUNDS = 5;
 
 /* ---------- stockage ---------- */
 /* Profils : les données de chaque enfant ont leur propre préfixe (le 1er enfant garde les clés d'origine) */
-const PROF_SHARED=new Set(["profiles","curProfile","welcomed","custom","hidden","installLater","lastBackup","glv3"]);
+const PROF_SHARED=new Set(["profiles","curProfile","welcomed","statsOpt","statsSeen","custom","hidden","installLater","lastBackup","glv3"]);
 let CUR_PROF=(()=>{try{return JSON.parse(localStorage.getItem("lam_curProfile"))||"p1"}catch(e){return "p1"}})();
 const pkey=k=>"lam_"+(PROF_SHARED.has(k)||CUR_PROF==="p1"?"":CUR_PROF+"_")+k;
 function load(k,d){try{const v=localStorage.getItem(pkey(k));return v==null?d:JSON.parse(v)}catch(e){return d}}
@@ -752,7 +752,7 @@ const READ_ACTS={
   syl:{t:"Quelle syllabe ?",d:"J'entends les sons ou le mot, je trouve la syllabe",img:()=>(STK_IMG.sons||[])[12]}
 };
 function startRead(){R.round=0;R.mode=null;renderReadMenu()}
-/* Miamots — phrases V1.1 (174 phrases graduées ; PH029 et PH061 corrigées : mots retirés « ravi » et « toc » remplacés) : [id, étape banque, phrase, question, réponse, 1 très courte / 2 courte] */
+/* Miamots — phrases V1.2 (174 phrases graduées + 30 phrases « tout début » PH175-PH204 avec Lili, rit, rat, lit, lu, sourit ; PH029 et PH061 corrigées : mots retirés « ravi » et « toc » remplacés) : [id, étape banque, phrase, question, réponse, 1 très courte / 2 courte] */
 /* ===== Phrases V1.1 : lecture de phrases + question de compréhension =====
    Règles : chaque mot de contenu doit être lisible avec les graphèmes connus de l'enfant (banque V7) ;
    les mots-outils (liste canonique) et les formes verbales à enseigner sont SOUTENUS (on touche → on entend) ;
@@ -787,10 +787,10 @@ function phrTokens(txt){
 /* type de question → famille de réponses (les distracteurs viennent de la même famille) */
 const PHR_Q=q=>{q=q.replace(/'/g,"’").toLowerCase();const f=q.split(/\s+/)[0];
   if(/couleur/.test(q))return "coul";if(/combien|nombre/.test(q))return "num";if(f==="quand")return "quand";
-  if(f==="où"||f==="d’où")return "ou";if(f==="qui"||/^avec qui|son nom/.test(q))return "qui";
+  if(f==="où"||f==="d’où")return "ou";if(/fait-|^que fait/.test(q))return "fait";if(f==="qui"||/^avec qui|son nom/.test(q))return "qui";
   if(/^(que|qu’)/.test(f))return "quoi";return "adj"};
 const PHR_EXTRA={coul:"rouge bleu jaune vert noir blanc rose mauve gris orange",num:"deux trois quatre cinq six sept huit neuf dix onze douze zéro",quand:"lundi mardi mercredi jeudi vendredi samedi dimanche demain"};
-const PHR_FAM={coul:["coul"],num:["num"],quand:["quand"],ou:["ou"],qui:["qui","quoi"],quoi:["quoi","qui"],adj:["adj","coul"]};
+const PHR_FAM={fait:["fait"],coul:["coul"],num:["num"],quand:["quand"],ou:["ou"],qui:["qui","quoi"],quoi:["quoi","qui"],adj:["adj","coul"]};
 let _phr=null;
 function PHRASES(){
   if(_phr)return _phr;
@@ -839,12 +839,12 @@ function phrGroups(tk){
 function phrChoices(p,lvl){
   const okTk=tk=>tk.every(t=>phrTokOK(t,lvl)),stem=h=>h.replace(/e$/,"");   /* noir / noire : même réponse */
   const aN=phrNorm(p.ans),seen=new Set([aN]),heads=new Set([stem(phrHead(p.ans))]),out=[];
+  const qw=new Set(p.q.replace(/'/g,"’").toLowerCase().split(/[\s’?!.,-]+/));   /* pas de groupe déjà nommé dans la question */
   const isP=tk=>tk.some(t=>t.k==="b"&&t.w.ty==="p");
   const add=tk=>{if(out.length>=2||!tk.length||!okTk(tk))return;
     if(p.qt==="quoi"&&isP(tk)&&!isP(p.ans))return;   /* « qu'est-ce que… » : pas un prénom comme distracteur */
-    const n=phrNorm(tk),h=stem(phrHead(tk));if(seen.has(n)||heads.has(h))return;seen.add(n);heads.add(h);out.push(tk)};
+    const n=phrNorm(tk),h=stem(phrHead(tk));if(seen.has(n)||heads.has(h)||qw.has(phrHead(tk)))return;seen.add(n);heads.add(h);out.push(tk)};
   const others=shuffle(PHRASES().filter(q=>q.id!==p.id));
-  const qw=new Set(p.q.replace(/'/g,"’").toLowerCase().split(/[\s’?!.,-]+/));   /* pas de groupe déjà nommé dans la question */
   if(p.qt==="qui"||p.qt==="quoi")shuffle(phrGroups(p.tk)).filter(g=>!qw.has(phrHead(g))).forEach(add);
   (PHR_FAM[p.qt]||[p.qt]).forEach(f=>{
     others.filter(q=>q.qt===f).forEach(q=>add(q.ans));
@@ -3023,10 +3023,26 @@ function analyse(){
 }
 const cnt=(list,s)=>list.filter(x=>x.ev.status===s).length;
 const chip=s=>`<span class="stchip st-${s}">${ST3[s][0]} ${ST3[s][1]}</span>`;
+/* Détails d'une compétence : une liste en points plutôt qu'une longue ligne */
 function meta(ev,extra){
   if(!ev.n)return "Pas encore observé";
-  return [ev.n+" occasion"+(ev.n>1?"s":""),"récent : "+pct(ev.rate),ev.distinct?ev.distinct+" mots différents":"",ev.days?ev.days+" jour"+(ev.days>1?"s":""):"","dernière fois : "+fmtD(ev.last),extra||""].filter(Boolean).join(" · ");
+  const pts=[ev.n+" occasion"+(ev.n>1?"s":"")+(ev.days?" sur "+ev.days+" jour"+(ev.days>1?"s":""):""),"Réussite récente du premier coup : "+pct(ev.rate),ev.distinct?ev.distinct+" mots différents":"","Dernière fois : "+fmtD(ev.last)]
+    .concat((()=>{const xs=String(extra||"").split(" · ").map(s=>s.replace(/^ex\. /,"Exemples : ")).filter(Boolean);
+      const how=xs.filter(s=>/^(1er coup|après erreur|avec aide)/.test(s));   /* 1er coup · après erreur · avec aide : sur une seule ligne */
+      return xs.filter(s=>!how.includes(s)).concat(how.length?[how.join(" · ")]:[])})()).filter(Boolean);
+  return `<ul class="mlist">${pts.map(p=>`<li>${p}</li>`).join("")}</ul>`;
 }
+/* Exemples de mots pour un son : réussis du premier coup (les plus récents) et à revoir */
+let _wset=null;
+function sndEx(g){
+  if(!_wset)_wset=new Set(WORDS.map(w=>w.w));
+  const ok=[],ko=[];
+  for(let i=LOG.length-1;i>=0&&(ok.length<3||ko.length<2);i--){const e=LOG[i];
+    if(!e.it||!e.gs||!_wset.has(e.it)||!e.gs.includes(g))continue;
+    if(e.f){if(ok.length<3&&!ok.includes(e.it)&&!ko.includes(e.it))ok.push(e.it)}else if(ko.length<2&&!ko.includes(e.it)&&!ok.includes(e.it))ko.push(e.it)}
+  return {ok,ko};
+}
+const exTxt=x=>{if(!x)return "";const a=x.ok?x.ok:x,b=x.ko||[];return [a.length?"réussis : "+a.join(", "):"",b.length?"à revoir : "+b.join(", "):""].filter(Boolean).join(" · ")};
 function item(k,ev,extra){return `<div class="ritem"><div class="k">${k}</div><div class="rb">${chip(ev.status)}${ev.evo?` <span class="evo">${ev.evo}</span>`:""}<div class="meta">${meta(ev,extra)}</div></div></div>`}
 const AVATARS=["🦊","🐼","🦁","🐸","🐰","🐻","🦄","🐯","🐨","🐙","🐧","🦖"];
 let PROFILES=load("profiles",null);
@@ -3047,7 +3063,16 @@ function openWho(){
   d.querySelectorAll(".whoc").forEach(b=>b.onclick=()=>{SFX.tap();switchProfile(b.dataset.id)});
   if(!d.open){if(d.showModal)d.showModal();else d.setAttribute("open","")}
 }
+/* Réglages : « Pour quel enfant ? » en haut (un bouton par enfant) */
+function renderKidChips(){
+  const box=$("kidChips");if(!box)return;box.innerHTML="";
+  PROFILES.forEach(p=>{const b=el("button","card"+(p.id===CUR_PROF?" on":""),`<span class="kav">${p.av}</span>${escH(p.name||"Enfant")}`);
+    b.onclick=()=>{SFX.tap();if(p.id!==CUR_PROF)switchProfile(p.id)};box.appendChild(b)});
+  const add=el("button","card","➕");add.setAttribute("aria-label","Ajouter un enfant");
+  add.onclick=()=>{const d=$("kidsDet");if(d){d.open=true;d.scrollIntoView({behavior:"smooth",block:"start"})}};box.appendChild(add);
+}
 function renderProfiles(){
+  try{renderKidChips()}catch(e){}
   const box=$("profList");if(!box)return;box.innerHTML="";
   PROFILES.forEach(p=>{
     const row=el("div","profrow"+(p.id===CUR_PROF?" on":""));
@@ -3214,7 +3239,8 @@ function renderReport(){
   h+=`<div class="rsum"><div>⭐ Étoiles<b>${stars}</b></div><div>📒 Autocollants<b>${album.length}/${STICKERS.length}</b></div><div>🚀 Voyages<b>${mission}</b></div></div>`;
   h+=`<details class="rsec adv"><summary>🔬 Voir le compte rendu avancé</summary>${advancedHTML(R)}</details>`;
   b.innerHTML=h;$("expMsg").textContent="";
-  const ns=$("nextSteps");nextSteps(R).forEach(x=>{const d=el("div","nstep",`<span>👉</span><div><p>${x.txt}</p></div>`);if(x.action){const bt=el("button","card nsbtn",x.action.label);bt.onclick=()=>{SFX.tap();x.action.fn(bt)};d.lastChild.appendChild(bt)}ns.appendChild(d)});
+  const ns=$("nextSteps");nextSteps(R).forEach(x=>{const pr=String(x.txt).split(/(?<=[.!)]) (?=[A-ZÀ-ÝÉ«])|\s;\s/).filter(Boolean);   /* phrases longues → une ligne + points */
+    const d=el("div","nstep",`<span>👉</span><div>${pr.length>1?`<p><b>${pr[0]}</b></p><ul class="mlist">${pr.slice(1).map(s=>`<li>${s.charAt(0).toUpperCase()+s.slice(1)}</li>`).join("")}</ul>`:`<p>${x.txt}</p>`}</div>`);if(x.action){const bt=el("button","card nsbtn",x.action.label);bt.onclick=()=>{SFX.tap();x.action.fn(bt)};d.lastChild.appendChild(bt)}ns.appendChild(d)});
 }
 /* ===== Temps de jeu ===== */
 const GNAME=g=>g==="home"?"🗺️ Carte et parcours":g==="sons"?"🔊 Atelier des sons":(GAMES[g]||g);
@@ -3237,7 +3263,7 @@ function advancedHTML(R){
   let h=`<p class="rlegend">⭐ Acquis : au moins 6 occasions, 80 % de réussite du premier coup sur les plus récentes, des réussites sur au moins 2 jours (et, pour la lecture, sur au moins 4 mots différents). Le statut est conservé tant que la réussite récente reste au-dessus de 60 %. ${LOG.length} essais enregistrés depuis le ${LOG.length?fmtD(LOG[0].t):"—"}.</p>`;
   const dirTxt=x=>[x.s2g?"son → lettre : "+x.s2g.n+" (récent "+pct(x.s2g.rate)+")":"",x.g2s?"lettre → son : "+x.g2s.n+" (récent "+pct(x.g2s.rate)+")":""].filter(Boolean).join(" · ");
   h+=`<div class="rsub">🔊 Sons : correspondances lettre-son</div><p class="rlegend">Évaluation directe : atelier des Sons, la cuisine (seule la lettre qui distingue les biscuits est évaluée) et Écrire (syllabes dictées). Les réussites dans les autres jeux sont des indices complémentaires.</p>`;
-  R.sonsShown.forEach(x=>h+=item(x.g,x.ev,[dirTxt(x),x.ind?x.ind+" indices dans d'autres jeux":"",x.srcs?"évalué dans : "+x.srcs:"",x.inGames?"":"non coché"].filter(Boolean).join(" · ")));
+  R.sonsShown.forEach(x=>{const X=sndEx(x.g);h+=item(x.g,x.ev,[dirTxt(x),x.ind?x.ind+" indices dans d'autres jeux":"",x.srcs?"évalué dans : "+x.srcs:"",x.inGames?"":"non coché",X.ok.length?"Exemples : "+X.ok.join(", "):"",X.ko.length?"À revoir : "+X.ko.join(", "):""].filter(Boolean).join(" · "))});
   h+=`<div class="rsub">🍪 Syllabes CV (reconnaissance)</div><p class="rlegend">La cuisine : entendre une syllabe et la retrouver à l'écrit. C'est une mesure de reconnaissance et de traitement des syllabes simples, pas une preuve pure de fusion des sons.</p>`;
   h+=item("CV global",R.cv.ev,R.cv.ex.length?"ex. "+R.cv.ex.join(", "):"");
   if(R.vc&&R.vc.ev.n)h+=item("VC (syllabes inversées)",R.vc.ev,R.vc.ex.length?"ex. "+R.vc.ex.join(", "):"");
@@ -3386,7 +3412,7 @@ body{font-family:"Andika","Trebuchet MS",Arial,sans-serif;color:#1E2A55;max-widt
 .dots i{display:inline-block;width:11px;height:11px;border-radius:50%;background:#E4E8F0;margin-left:3px}.dots i.on{background:#5DA9E9}
 .foot{display:flex;align-items:center;gap:10px;margin-top:6px;color:#6B7A99;font-size:12px}.foot img{width:46px}
 h1.det{font-size:20px;margin:22px 0 10px}
-table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{padding:5px 7px;text-align:left;border-bottom:1px solid #EEE4CC}th{background:#F6F1E3}
+table{width:100%;border-collapse:collapse;font-size:12.5px}td.exc{font-size:11.5px;color:#4B5A7A}th,td{padding:5px 7px;text-align:left;border-bottom:1px solid #EEE4CC}th{background:#F6F1E3}
 @media print{body{background:#fff;margin:0;padding:0;max-width:none}.card,.hero,.head{break-inside:avoid}}
 @media (max-width:640px){.two{grid-template-columns:1fr}.line{flex-direction:column}.line>b{width:auto}.slab{min-width:0}.tg{grid-template-columns:110px 1fr 60px}}
 </style></head><body>
@@ -3405,11 +3431,11 @@ ${R.our.length?card("ours","📅","Nos mots",R.our.map(g=>{const pc=g.words.leng
 ${card("time","⏱️","Temps de jeu",`<div class="tiles"><div class="tile"><b>${fmtMin(T.today)}</b><small>aujourd'hui</small></div><div class="tile"><b>${fmtMin(T.tot7)}</b><small>7 derniers jours</small></div><div class="tile"><b>${T.played7}</b><small>jour${T.played7>1?"s":""} de jeu</small></div></div>${games.map(([g,v])=>`<div class="tg"><span>${esc(GNAME(g))}</span><div class="bar"><i style="width:${Math.max(4,Math.round(v/gmax*100))}%"></i></div><span>${fmtMin(v)}</span></div>`).join("")}`)}
 ${card("lvl","🎮","Progression dans les jeux",`<div class="lv">${Object.entries(GAMES).map(([g,n])=>`<div><span>${esc(n)}</span><span class="dots">${[1,2,3].map(i=>`<i class="${i<=lv(g).lvl?"on":""}"></i>`).join("")}</span></div>`).join("")}</div><p class="ex" style="margin-top:8px">Le niveau d'un jeu montre la progression dans l'application, pas directement une compétence. ⚪ « Pas encore assez observé » ne veut pas dire une difficulté.</p>`)}`;
   if(detailed){
-    const rows=(arr,lab)=>arr.map(x=>`<tr><td>${esc(lab(x))}</td><td>${pill(x.ev.status)}</td><td>${x.ev.n||""}</td><td>${pct(x.ev.rate)}</td><td>${x.ev.distinct||""}</td><td>${x.ev.days||""}</td><td>${x.ev.evo||""}</td></tr>`).join("")||`<tr><td colspan="7">Pas encore observé</td></tr>`;
-    const th=`<tr><th>Catégorie</th><th>Statut</th><th>Occasions</th><th>Réussite récente</th><th>Mots différents</th><th>Jours</th><th>Évolution</th></tr>`;
+    const rows=(arr,lab,exf)=>arr.map(x=>`<tr><td>${esc(lab(x))}</td><td>${pill(x.ev.status)}</td><td>${x.ev.n||""}</td><td>${pct(x.ev.rate)}</td><td>${x.ev.days||""}</td><td>${x.ev.evo||""}</td><td class="exc">${esc(exTxt(exf?exf(x):x.ex))}</td></tr>`).join("")||`<tr><td colspan="7">Pas encore observé</td></tr>`;
+    const th=`<tr><th>Catégorie</th><th>Statut</th><th>Occasions</th><th>Réussite récente</th><th>Jours</th><th>Évolution</th><th>Exemples (mots lus)</th></tr>`;
     const tcard=(icon,title,body)=>card("lvl",icon,title,`<table>${th}${body}</table>`);
     h+=`<h1 class="det">🔬 Portrait détaillé</h1>
-${tcard("🔊","Sons (correspondances lettre-son)",rows(R.sonsShown,x=>x.g))}
+${tcard("🔊","Sons (correspondances lettre-son)",rows(R.sonsShown,x=>x.g,x=>sndEx(x.g)))}
 ${tcard("🍪","Syllabes CV (reconnaissance)",rows([R.cv],()=>"CV global")+rows(R.cvC,x=>x.c+" + voyelle")+rows(R.cvV,x=>"consonne + "+x.v))}
 ${tcard("🚂","Assemblage syllabique",rows(R.asm,x=>x.lab))}
 ${tcard("🧩","Décodage : structures",rows(R.decStruct,x=>x.lab))}
@@ -3745,8 +3771,15 @@ function renderHome(){
   const outer=el("div","wcwrap"),wrap=el("div","wchome");
   const img=document.createElement("img");img.className="wchome-img";img.src=WC_HOME_IMG;img.alt="Le village de Miamots";img.draggable=false;wrap.appendChild(img);
   wrap.appendChild(el("div","wc-score",`<span>${stars}</span>`));
-  const P=curParc(),steps=el("div","wc-steps");
-  P.steps.forEach((g,i)=>{steps.appendChild(el("div","wc-step",(i<P.i||P.done)?"✅":PLACES[g].e));if(i<P.steps.length-1)steps.appendChild(el("span","wc-arrow","➜"))});
+  const P=curParc(),steps=el("div","wc-parcband"+(P.done?" done":""));
+  /* Bandeau du parcours : 3 médaillons reliés par des petits pas ; l'étape en cours brille, les étapes faites ont un ✅ */
+  const SHORT={train:"Gare",fusee:"Fusée",sons:"Sons",lire:"Livres",chenille:"Jardin",ecouter:"Cuisine",ecrire:"École",musee:"Musée"};
+  steps.appendChild(el("div","pb-title",P.done?"🏆 Parcours réussi !":"🗺️ Mon parcours du jour"));
+  const row=el("div","pb-row");
+  P.steps.forEach((g,i)=>{const done=i<P.i||P.done,cur=!P.done&&i===P.i;
+    const m=el("div","pb-step"+(done?" ok":"")+(cur?" cur":""),`<span class="pb-med">${PLACES[g].e}${done?'<i class="pb-ck">✓</i>':""}</span><small>${SHORT[g]||""}</small>`);
+    row.appendChild(m);if(i<P.steps.length-1)row.appendChild(el("span","pb-feet","• • •"))});
+  steps.appendChild(row);
   wrap.appendChild(steps);
   // Miam habite la carte : il est devant le dernier lieu visité
   let at=load("miamAt","depart");if(!MIAM_SPOTS[at])at="depart";
@@ -3837,6 +3870,15 @@ $("title").onkeydown=e=>{if(e.key==="Enter")go("home")};
 
 
 /* ---------- Album ---------- */
+function albumPlayBtn(pg){
+  let b=$("albumPlay");
+  if(!b){b=el("button","card btn albplay","");b.id="albumPlay";b.type="button";$("albumGrid").insertAdjacentElement("afterend",b)}
+  if(!pg){b.hidden=true;return}
+  b.hidden=false;const lock=isLocked(pg.g);
+  b.innerHTML=lock?`☁️ ${pg.n} : bientôt !`:`▶️ Jouer pour gagner ces autocollants`;b.classList.toggle("off",lock);
+  b.onclick=()=>{SFX.tap();if(lock){SEQ++;speak(pg.n+" est encore dans les nuages. Continue à jouer, et ce lieu va s'ouvrir !");return}
+    const d=$("albumDlg");if(d.close)d.close();else d.removeAttribute("open");PARC_ACTIVE=false;go(pg.g)};
+}
 function renderAlbum(){
   migrateAlbum();
   const tabs=$("albumTabs");tabs.innerHTML="";
@@ -3846,11 +3888,12 @@ function renderAlbum(){
   if(albumPage==="photos"){
     g.className="album photos";
     PHOTOS.forEach((src,i)=>{const have=MPH.includes(i);const c=el("span",have?"pol have":"pol miss",have?`<img src="${src}" alt="">`:"📷");c.style.setProperty("--r",((i*37)%7-3)+"deg");if(have)c.onclick=()=>{const ov=el("div","photopop",`<div class="polaroid"><img src="${src}" alt="Miam"></div>`);ov.onclick=()=>ov.remove();document.body.appendChild(ov)};g.appendChild(c)});
+    albumPlayBtn(null);
     $("albumText").textContent=`Les photos de Miam sur la Terre : ${MPH.length} sur ${PHOTOS.length}. Termine un parcours du jour ou une page d'autocollants pour en gagner une !`;
     return;
   }
   g.className="album";
-  const pg=STICKER_PAGES[albumPage];
+  const pg=STICKER_PAGES[albumPage];albumPlayBtn(pg);
   pg.items.forEach(x=>{const have=album.includes(x);g.appendChild(el("span",have?"have"+(GOLD.includes(x)?" gold":""):"miss",have?stkHTML(x):"?"))});
   const all=STICKER_PAGES.every(p=>p.items.every(x=>album.includes(x)));
   $("albumText").textContent=`${pg.e} ${pg.n}. Tu as ${album.length} autocollants sur ${STICKERS.length}`+(GOLD.length?`, dont ${GOLD.length} dorés ✨`:"")+(medals?` et ${medals} médaille${medals>1?"s":""} 🏅`:"")+". "+(all?"Ton album est complet : chaque nouvelle partie rend un autocollant doré !":"Chaque jeu donne les autocollants de son lieu !");
@@ -3869,7 +3912,7 @@ $("closeAlbum").onclick=()=>{const d=$("albumDlg");if(d.close)d.close();else d.r
 function cfgRow([k,label,opts]){
   const row=el("div","cfgrow");row.appendChild(el("div","lab",label));
   const sg=el("div","seg");
-  opts.forEach(([v,t])=>{const b=el("button","card"+(String(CFG[k])===String(v)?" on":""),t);b.onclick=()=>{CFG[k]=v;save("cfg",CFG);renderSettings()};sg.appendChild(b)});
+  opts.forEach(([v,t])=>{const b=el("button","card"+(String(CFG[k])===String(v)?" on":""),t);b.onclick=()=>{CFG[k]=v;save("cfg",CFG);if(k==="stats"){save("statsOpt",v);save("statsSeen",true)}renderSettings()};sg.appendChild(b)});
   row.appendChild(sg);return row;
 }
 /* Ouvert depuis un jeu : les options de ce jeu arrivent en haut */
@@ -4580,6 +4623,8 @@ const PHASE_N={oral:"👂 L'oral",sons:"🌱 Les sons",syl:"🎶 Les syllabes",m
 function renderProg(){
   document.querySelectorAll("#progSeg [data-v]").forEach(b=>b.classList.toggle("on",(progAuto()?"auto":"manuel")===b.dataset.v));
   const box=$("progBox"),man=$("manualBox");box.innerHTML="";man.hidden=progAuto();
+  try{const sm=$("progSum");if(sm){if(!progAuto())sm.textContent="✋ Manuelle : "+sel.size+" sons cochés";else{if(!PROG||PROG.i==null)progInit();const st=curStep();sm.textContent="🌱 Automatique · étape "+(progI()+1)+" sur "+CURRIC.length+(st.add.length?" : "+st.add.join(", "):" : "+(st.kid||st.t))}}}catch(e){}
+  try{const ws=$("weeksSum");if(ws){const on=WEEKS.filter(w=>w.on).length;ws.textContent=WEEKS.length?WEEKS.length+" semaine"+(WEEKS.length>1?"s":"")+(on?" · "+on+" cochée"+(on>1?"s":""):" · aucune cochée"):"Aucune liste pour l'instant"}}catch(e){}
   if(!progAuto()){box.appendChild(el("p","rlegend","Vous choisissez vous-même les sons et les structures de mots, ci-dessous. Les jeux n'utilisent que ce qui est coché."));return}
   if(!PROG||PROG.i==null)progInit();
   const i=progI(),st=curStep(),S=stepState(i);
@@ -4731,7 +4776,22 @@ setInterval(()=>{
    Rien n'est envoyé hors ligne, ni depuis l'ordinateur (file://). */
 const GC_URL="https://miamots.goatcounter.com/count";
 const GC_NOMS={train:"Train",fusee:"Fusée",sons:"Sons",chenille:"Jardin",ecouter:"Cuisine",lire:"Lire",ecrire:"Écrire",musee:"Musée"};
-const gcOn=()=>CFG.stats!=="non"&&location.protocol==="https:";
+/* le choix vaut pour tout l'appareil (tous les enfants) */
+CFG.stats=load("statsOpt","oui");
+const gcOn=()=>load("statsOpt","oui")!=="non"&&location.protocol==="https:";
+/* Avertissement une seule fois par appareil (nouveaux comme anciens utilisateurs), quand aucune autre fenêtre n'est ouverte */
+function statsNotice(){
+  if(load("statsSeen",false)||location.protocol!=="https:")return;
+  if(document.querySelector("dialog[open]"))return setTimeout(statsNotice,1500);
+  const d=document.createElement("dialog");d.className="statsdlg";
+  d.innerHTML=`<div class="dlg"><h2>📊 Pour améliorer Miamots</h2>
+   <p>Miamots compte de façon <b>anonyme</b> le temps passé dans chaque jeu et les jeux arrêtés avant la fin. Ça nous aide à savoir ce qui plaît aux enfants et ce qui est trop long.</p>
+   <p class="rlegend">Aucun prénom, aucun courriel, aucune réponse de l'enfant, aucun cookie. Vous pouvez changer d'idée dans les réglages pour l'adulte (Options avancées › 📊 Statistiques anonymes).</p>
+   <div class="seg"><button type="button" class="card btn" data-v="oui">👍 D'accord</button><button type="button" class="card" data-v="non">Ne pas partager</button></div></div>`;
+  document.body.appendChild(d);
+  d.querySelectorAll("button").forEach(b=>b.onclick=()=>{const v=b.dataset.v;save("statsOpt",v);CFG.stats=v;save("statsSeen",true);if(v==="non")GCS=null;try{d.close()}catch(e){}d.remove();if(v==="oui")gcLoad()});
+  if(d.showModal)d.showModal();else d.setAttribute("open","");
+}
 let GCS=null;const gcQ=[];
 function gcLoad(){if(!gcOn()||window.__gcl)return;window.__gcl=1;
   const s=document.createElement("script");s.async=true;s.dataset.goatcounter=GC_URL;s.src="https://gc.zgo.at/count.js";
@@ -4749,6 +4809,7 @@ function gcEnd(done){
 function gcStart(id){if(GCS&&GCS.g===id)return;gcEnd(false);if(GC_NOMS[id])GCS={g:id,t0:Date.now(),n:0}}
 document.addEventListener("visibilitychange",()=>{if(document.hidden)gcEnd(false);else if(current&&GC_NOMS[current])gcStart(current)});
 gcLoad();
+setTimeout(statsNotice,2500);
 renderStars(false);go("home");
 $("openWizard").onclick=()=>{closeSettings();setTimeout(()=>openWelcome(1),50)};
 /* ----- Vidéo d'introduction : Miam arrive sur la Terre ----- */

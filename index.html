@@ -129,15 +129,12 @@
     <div class="seg is4"><button type="button" class="card btn" id="openReport">📊 Portrait de lecture</button></div>
     <button type="button" class="card btn is5" id="installSet" hidden>📲 Mettre Miamots sur l'écran d'accueil</button>
 
-    <div class="rsec open1">
-      <div class="rowlab is2"><b>📅 Mots de la semaine</b></div>
-      <p class="rlegend">Les mots de l'école, ajoutés par photo ou par liste. Les semaines cochées entrent dans tous les jeux.</p>
-      <button type="button" class="card btn is6" id="openWeeks">📅 Gérer les mots de la semaine</button>
-      <div class="seg is1" id="weeksSeg"><button type="button" class="card" data-v="tous">Même avec des sons pas encore vus</button><button type="button" class="card" data-v="coches">Seulement avec des sons déjà vus</button></div>
+    <div class="rsec kidsec"><div class="rowlab is2"><b>👧 Pour quel enfant ?</b></div>
+      <div class="kidchips" id="kidChips"></div>
+      <p class="rlegend">Les réglages, la progression et le portrait sont ceux de l'enfant choisi.</p>
     </div>
 
-    <div class="rsec open1">
-      <div class="rowlab is2"><b>🧭 Progression</b></div>
+    <details class="rsec" id="progDet"><summary>🧭 Progression <small class="sumtxt" id="progSum"></small></summary>
       <div class="seg" id="progSeg"><button type="button" class="card" data-v="auto">🌱 Automatique (recommandée)</button><button type="button" class="card" data-v="manuel">✋ Manuelle : je choisis les sons</button></div>
       <div id="progBox"></div>
       <div id="manualBox">
@@ -155,9 +152,15 @@
         <details class="more"><summary>ℹ️ Plus d'infos</summary><p>C = consonne, V = voyelle (ou, ch… comptent pour un son). Le e muet à la fin n'est pas compté : « lune » est un CVC. Les jeux ne proposent que les mots des structures cochées.</p></details>
         <div class="chips" id="setStruct"></div>
       </div>
-    </div>
+    </details>
 
-    <details class="rsec"><summary>👨‍👩‍👧 Enfants</summary>
+    <details class="rsec" id="weeksDet"><summary>📅 Mots de la semaine <small class="sumtxt" id="weeksSum"></small></summary>
+      <p class="rlegend">Les mots de l'école, ajoutés par photo ou par liste. Les semaines cochées entrent dans tous les jeux.</p>
+      <button type="button" class="card btn is6" id="openWeeks">📅 Gérer les mots de la semaine</button>
+      <div class="seg is1" id="weeksSeg"><button type="button" class="card" data-v="tous">Même avec des sons pas encore vus</button><button type="button" class="card" data-v="coches">Seulement avec des sons déjà vus</button></div>
+    </details>
+
+    <details class="rsec" id="kidsDet"><summary>👨‍👩‍👧 Gérer les enfants (prénoms, avatars, ajouter)</summary>
       <p class="rlegend">Chaque enfant a ses propres sons, niveaux, étoiles, album, listes de mots et portrait. Touchez l'avatar pour le changer.</p>
       <div id="profList"></div>
       <button type="button" class="card btn is7" id="addProf">➕ Ajouter un enfant</button>
